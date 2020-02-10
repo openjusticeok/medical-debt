@@ -15,7 +15,7 @@ output:
 
 ```{r setup, include=FALSE}
 library(ojo)
-library(knitr)]
+library(knitr)
 
 
 nc <- function(x) {comma(x, digits = 0)}
@@ -24,23 +24,31 @@ nc <- function(x) {comma(x, digits = 0)}
 
 Background information: Why are we researching this topic? What is the expected product? A blog post? Analysis for an internal or external partner?
 
+This project aims to shed new light on the extnt of the medical debt problem in Oklahoma using court data. 
+
 > **Research Question**
 
 # Data sources
 
 Where is the data from? The ojo database? OSCN? ODCR? Crime in Oklahoma reports? 
+The data is from OSCN.  
 
 ## Timeframe
 
 What years/months are you looking at? Year of case filing, first disposition, prison admission, etc.? Be as specific as possible.
+The analysis will be able to identify trends in these cases over the past 20 years (2000-2019)
 
 ## Geography
 
 What courts/counties/states are you looking at?
+This project will be focused on medical debt collection cases in civil courts across Oklahoma.
+
 
 ## Variables
 
 What variables did you use? What types of cases, crimes, etc.?
+Debt collections in the state's District Court.
+
 
 ## Query
 
@@ -48,6 +56,9 @@ If you're using data from the OJO database, include the query you used to pull y
 
 ``` {r}
 # d <- ojo_query_disps("TULSA", "CM", 2019)
+
+
+
 ```
 
 # Checking Data
