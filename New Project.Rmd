@@ -1,5 +1,5 @@
 ---
-title: "New Project"
+title: "SC Oklahoma County 00-19"
 author:
   - Leticia, Fellow
   - Open Justice Oklahoma
@@ -24,29 +24,33 @@ nc <- function(x) {comma(x, digits = 0)}
 
 Background information: Why are we researching this topic? What is the expected product? A blog post? Analysis for an internal or external partner?
 
-This project aims to shed new light on the extnt of the medical debt problem in Oklahoma using court data. 
+Using court data, this project aims to shed new light on the extent of the medical debt problem in Oklahoma.
 
 > **Research Question**
 
 # Data sources
 
-Where is the data from? The ojo database? OSCN? ODCR? Crime in Oklahoma reports? 
-The data is from OSCN.  
+Where is the data from? The ojo database? OSCN? ODCR? Crime in Oklahoma reports?
+
+The data is from the ojo database and OSCN.  
 
 ## Timeframe
 
 What years/months are you looking at? Year of case filing, first disposition, prison admission, etc.? Be as specific as possible.
-The analysis will be able to identify trends in these cases over the past 20 years (2000-2019)
+
+The analysis aims to identify trends in medical debt cases over the past 20 years (2000-2019).
 
 ## Geography
 
 What courts/counties/states are you looking at?
-This project will be focused on medical debt collection cases in civil courts across Oklahoma.
+
+This project will focus on medical debt collection cases in civil courts across Oklahoma.
 
 
 ## Variables
 
 What variables did you use? What types of cases, crimes, etc.?
+
 Debt collections in the state's District Court.
 
 
@@ -55,7 +59,8 @@ Debt collections in the state's District Court.
 If you're using data from the OJO database, include the query you used to pull your data. This may be a function that starts `ojo_query_` or `dbGetQuery`.
 
 ``` {r}
-# d <- ojo_query_disps("TULSA", "CM", 2019)
+
+sc <- ojo_query_disps("OKLAHOMA", "SC", 2000:2019) 
 
 
 
@@ -65,23 +70,28 @@ If you're using data from the OJO database, include the query you used to pull y
 
 Explain the results of the checks of your data.
 
+The data is 99-100% complete. 
+
 ## Check for Completeness
 
 If you're using court data, you can use the `ojo_check_comp` to see how complete the data is.
 
 ```{r}
-# ojo_check_comp(sc)
+
+ojo_check_comp(sc)
 ```
 
 ## Check for NAs
 
 Detail the NAs and blank items in your data and, if necessary and possible, fill them in.
 
+A large portion of the "iss_plaint" data for the early 2000s is missing. 
+
 ``` {r}
-# rog_nas <- rog %>% 
-#   summarize(nas = sum(is.na(defname) | defname == "")) # checks for NA and blank ("") defendant names
-# 
-# rog_nas
+
+nas <- sc %>%
+  group_by(casenum) %>% 
+  filter(all(is.na(iss_plaint) | iss_plaint == ""))
 ```
 
 ## Check for outliers
@@ -93,6 +103,68 @@ If you're looking at numeric data, look at the highest and lowest values and exp
 This is where you'll likely spend the biggest chunk of time if you're using court data. There are a lot of ways things can go wrong, so we want to be able to trace back all of our steps and document all the decisions we're making.
 
 Because each analysis project is a bit different, the number and length of subsections in this section will vary a lot. 
+``` {r}
+sc %>% 
+  count(iss_desc) %>% 
+  arrange(desc(n)) 
+```
+``` {r}
+debt <- sc %>% 
+  filter(!str_detect(iss_desc, "FORC|PROMISSORY|REPLEVIN|BREACH"))
+
+debt %>% 
+  count(iss_desc) %>% 
+  arrange(desc(n)) 
+```
+``` {r}
+debt <- debt %>% 
+  filter(str_detect(iss_desc, "DEBT"))
+
+debt %>% 
+  count(iss_desc) %>% 
+  arrange(desc(n)) 
+```
+``` {r}
+debt %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n))  
+```
+``` {r}
+debt <- debt %>% 
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|SURGICARE|INTEGRIS\\sAMBULATORY|COMPREHENSIVE\\sTHERAPY|CARDIOLOGY|TERENCE\\sC\\sTOFT\\sDDS|DENTIST|FOOT\\sAND\\sANKLE|DENTAL|SURGERY|ORTHOPEDICS|INTEGRIS|ALLIED\\sPHYSICIANS\\sGROUP|SURGICAL|D\\.D\\.S\\.|ADVANCES\\sIN\\sDENTISTRY|MANORCARE|ANESTHESIOLOGY|OU\\sPHYSICIANS|PULMONARY|PHARMACEUTICALS|PHYSICAL\\sTHERAPY|RADIOLOGY| DDS|COMPREHENSIVETHERAPY|PEDIATRICS|MRI") ~ "MEDICAL",
+                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|WORLD\\sACCEPTANCE|INVESTMENT|FINANCE|MONEY|MOTORS|CASH|B\\s&\\sF|PROFESSIONAL\\sINSURANCE\\sAGENCY\\sCORP|SOUTHWESTERN\\sBELL\\sYELLOW\\sPAGES|SINGLETON\\sENTERPRISES|B&F|B\\sAND\\sF|MANHATTAN\\sMANAGEMENT\\sCOMPANY|ROYAL\\sPRESTIGE|BONDS|TELEPHONE|DEPARTMENT\\sSTORES|AUTO|HOME|ADVANCE\\sAMERICA|STATE\\sOF\\sOKLAHOMA|ROCK\\sKNOLL\\sASSOCIATION|B&\\sF|ELECTRIC|RENT\\sA\\sCENTER|LIBERTY\\sBONDING|DEPARTMENT\\sOF\\sTRANSPORTATION") ~ "OTHER",
+                                 TRUE ~ "UNKNOWN"))
+
+debt %>% 
+  count(plaint_type) %>% 
+  arrange(desc(n))
+
+
+```
+``` {r}
+debt %>%
+  filter(plaint_type == "UNKNOWN") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+```
+
+```{r}
+debt %>% 
+  count(plaint_type) %>% 
+  arrange(desc(n))
+```
+```{r}
+debt %>%
+  filter(plaint_type == "MEDICAL") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+
+```
+``` {r}
+debt <- debt %>% 
+  filter(plaint_type == "MEDICAL")
+
+```
 
 ## Measure 1
 
@@ -101,6 +173,53 @@ Describe how you defined the first measure.
 # Summarizing and Visualizing Data
 
 There will likely be several sections here too. Summarize and visualize the data in different ways and identify trends that you see.
+``` {r}
+debt <- debt %>% 
+  group_by(casenum) %>% 
+  slice(1)
+
+year_sum <- debt %>% 
+  ungroup %>%
+  count(file_year)
+
+ggplot(year_sum, aes(file_year, n)) +
+  geom_line() +
+  geom_text(aes(y = n + 50, label = n), family = "Menlo", size = 3) +
+  xlab("Year") + ylab("Cases") +
+  ylim(0, NA) + # Extends y-axis down to zero
+  theme_ojo() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.subtitle = element_text(hjust = 0.5)) +
+  labs(title = "Small claims medical debt cases",
+       subtitle = "Oklahoma County 2000-2019")
+```
+``` {r}
+debt <- debt %>% 
+  mutate(plaint_cat = case_when(str_detect(iss_plaint, "INTEGRIS") ~ "INTEGRIS",
+                                str_detect(iss_plaint, "EMERGENCY MEDICAL SERVICES AUTHORITY") ~ "EMERGENCY MEDICAL SERVICES AUTHORITY",
+                                str_detect(iss_plaint, "OKLAHOMA SURGICARE") ~ "OKLAHOMA SURGICARE",
+                                TRUE ~ "OTHER"))
+
+plaint_sum <- debt %>% 
+  ungroup %>% # Our data frame is still grouped by casenum from the code above; ungroup to summarize using broader groups
+  count(file_year, plaint_cat)
+
+ggplot(plaint_sum, aes(file_year, n, group = plaint_cat, color = plaint_cat)) +
+  geom_line() +
+  xlab("Year") + ylab("Cases")+
+  ylim(0, NA) + # Extends y-axis down to zero
+  theme_ojo() + # Adds ojo styling to the plot
+  theme(legend.title=element_blank())+
+  theme(plot.title = element_text(hjust = 0.5, size = 14)) +
+  theme(plot.subtitle = element_text(hjust = 0.5, size = 13)) +
+  theme(legend.text=element_text(size = 8))+
+  theme(legend.position="bottom")+
+  labs(title = "Small claims medical debt cases\nin Oklahoma County 2000-2019",
+       subtitle = "By medical provider") +
+  scale_color_manual(values = ojo_pal) # Gives lines colors from ojo's palette
+
+```
+
 
 ## Summary 1
 
