@@ -60,10 +60,10 @@ If you're using data from the OJO database, include the query you used to pull y
 
 ``` {r}
 
-sc <- ojo_query_disps("CANADIAN", "SC", 2000:2019) 
+sc <- ojo_query_disps("CANADIAN", "SC", 2000:2019)
 
 
-
+# other_counties <- ojo_query_disps(c("ROGERS", "ROGERMILLS", "PUSHMATAHA"), "SC", 2000:2019)
 ```
 
 # Checking Data
@@ -77,8 +77,10 @@ The data is 99-100% complete.
 If you're using court data, you can use the `ojo_check_comp` to see how complete the data is.
 
 ```{r}
-
 ojo_check_comp(sc)
+
+completeness
+
 ```
 
 ## Check for NAs
