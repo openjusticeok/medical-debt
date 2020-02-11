@@ -1,5 +1,5 @@
 ---
-title: "SC CLEVELAND County 00-19"
+title: "SC Cleveland County 00-19"
 author:
   - Leticia, Fellow
   - Open Justice Oklahoma
@@ -194,7 +194,7 @@ ggplot(year_sum, aes(file_year, n)) +
 ```
 ``` {r}
 debt <- debt %>% 
-  mutate(plaint_cat = case_when(str_detect(iss_plaint, "NORMAN REGIONAL") ~ "NORMAN REGIONAL HEALTH SYSTEM",
+  mutate(plaint_cat = case_when(str_detect(iss_plaint, "NORMAN REGIONAL") ~ "NORMAN REGIONAL HEALTH",
                                 str_detect(iss_plaint, "INTEGRIS") ~ "INTEGRIS",
                                 str_detect(iss_plaint, "NORMAN ANESTHESIA PROVIDERS") ~ "NORMAN ANESTHESIA PROVIDERS",
                                 TRUE ~ "OTHER"))
@@ -211,7 +211,7 @@ ggplot(plaint_sum, aes(file_year, n, group = plaint_cat, color = plaint_cat)) +
   theme(legend.title=element_blank())+
   theme(plot.title = element_text(hjust = 0.5, size = 14)) +
   theme(plot.subtitle = element_text(hjust = 0.5, size = 13)) +
-  theme(legend.text=element_text(size = 6))+
+  theme(legend.text=element_text(size = 9))+
   theme(legend.position="bottom")+
   labs(title = "Small claims medical debt cases\nin Cleveland County 2000-2019",
        subtitle = "By medical provider") +
