@@ -1,5 +1,5 @@
 ---
-title: "SC Tulsa County 00-19"
+title: "Other Counties 00-19"
 author:
   - Leticia, Fellow
   - Open Justice Oklahoma
@@ -16,7 +16,6 @@ output:
 ```{r setup, include=FALSE}
 library(ojo)
 library(knitr)
-
 
 nc <- function(x) {comma(x, digits = 0)}
 
@@ -60,7 +59,7 @@ If you're using data from the OJO database, include the query you used to pull y
 
 ``` {r}
 
-sc <- ojo_query_disps("TULSA", "SC", 2000:2019) 
+other_counties <- ojo_query_disps(c("ROGERS", "PAYNE", "WAGONER", "POTTAWATOMIE", "CREEK", "MUSKOGEE","GARFIELD", "GRADY", "WASHINGTON", "LEFLORE","CHEROKEE", "CARTER", "LOGAN", "BRYAN", "OSAGE", "KAY", "PITTSBURG", "STEPHENS", "DELAWARE", "SEQUOYAH","MAYES", "MCCLAIN", "OKMULGEE", "PONOTOC", "LINCOLN", "MCCURTAIN", "OTTAWA", "CUSTER", "CADDO", "GARVIN", "JACKSON", "SEMINOLE", "ADAIR", "BECKHAM", "TEXAS", "WOODWARD", "MCINTOSH", "MARSHALL", "PAWNEE", "KINGFISHER", "CHOCTAW", "CRAIG", "MURRAY", "ATOKA", "HUGHES", "HASKELL", "OKFUSKEE", "NOBLE", "PUSHMATAHA", "WASHITA", "JOHNSTON", "LATIMER", "NOWATA", "LOVE", "BLAINE", "WOODS", "KIOWA", "MAJOR", "TILLMAN", "JEFFERSON","GREER", "COTTON", "ALFALFA", "COAL", "BEAVER", "DEWEY", "GRANT", "ELLIS", "HARPER", "ROGER", "HARMON", "CIMARRON"), "SC", 2000:2019)
 
 
 
@@ -70,7 +69,6 @@ sc <- ojo_query_disps("TULSA", "SC", 2000:2019)
 
 Explain the results of the checks of your data.
 
-The data is 99-100% complete. 
 
 ## Check for Completeness
 
@@ -78,7 +76,7 @@ If you're using court data, you can use the `ojo_check_comp` to see how complete
 
 ```{r}
 
-ojo_check_comp(sc)
+ojo_check_comp(other_counties)
 
 completeness
 ```
@@ -87,9 +85,11 @@ completeness
 
 Detail the NAs and blank items in your data and, if necessary and possible, fill them in.
 
+A large portion of the "iss_plaint" data for the early 2000s is missing. 
 
 ``` {r}
-nas_plaint<- sc %>%
+
+nas_plaint<- other_counties %>%
   group_by(casenum) %>% 
   filter(all(is.na(iss_plaint) | iss_plaint == "")) 
 
@@ -107,7 +107,8 @@ year_nas_plaint
 
 ```
 ``` {r}
-nas_desc <- sc %>%
+
+nas_desc <- other_counties %>%
   group_by(casenum) %>% 
   filter(all(is.na(iss_desc) | iss_desc == "")) 
 
@@ -123,28 +124,34 @@ year_nas_desc <- nas_desc%>%
 
 year_nas_desc
 
-```
-## Check for outliers
 
-If you're looking at numeric data, look at the highest and lowest values and explain your procedures to deal with them in this section.
+```
+
 
 # Defining Measures
 
 This is where you'll likely spend the biggest chunk of time if you're using court data. There are a lot of ways things can go wrong, so we want to be able to trace back all of our steps and document all the decisions we're making.
 
 Because each analysis project is a bit different, the number and length of subsections in this section will vary a lot. 
+
+
 ``` {r}
-sc %>% 
+
+other_counties %>% 
+  ungroup %>%
   count(iss_desc) %>% 
   arrange(desc(n)) 
+
 ```
 ``` {r}
-debt <- sc %>% 
-  filter(!str_detect(iss_desc, "FORC|PROMISSORY|REPLEVIN|BREACH"))
+debt <- other_counties %>% 
+  ungroup%>% 
+  filter(!str_detect(iss_desc, "FORC|REPLEVIN|BREACH"))
 
 debt %>% 
   count(iss_desc) %>% 
-  arrange(desc(n))
+   ungroup%>% 
+  arrange(desc(n)) 
 ```
 ``` {r}
 debt <- debt %>% 
@@ -161,8 +168,8 @@ debt %>%
 ```
 ``` {r}
 debt <- debt %>% 
-  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|ORTHOPEDIC|MED|AHS|ANESTHESIOLOGIST|OKLAHOMA\\sHEART\\sINC|PHYSICIANS| MD|GASTROENTEROLOGY| DDS|D\\.O\\.|SAPULPA|FOOT\\sAND\\sANKLE|NOSE| DO|THERAPY|ANESTHESIA|UROLOGIC|ENDOSCOPY|NEUROSURGERY|NEONATOLOGY|NEUROLOGICAL|ORTHOPAEDIC|RESPIRATORY|NEUROSPINE") ~ "MEDICAL",
-                                 str_detect(iss_plaint, "BANK|LAWN|BOND|CASH|CREDIT|CAR|MOTORS|AUTO|ELECTRIC|FCU|LOAN|BURGGRAF|RENT|PAINT|PLUMBING|AIRCO|KNOX\\sINSPECTION|EMERGENCY|CDK\\sDISTRIBUTION|BCV\\sHOLDINGS| CU|VETERINARY|SINGLES\\sSTATION") ~ "OTHER",
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|AMBULANCE|INTEGRIS| DDS|DENTAL") ~ "MEDICAL",
+                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANC|CASH|MONEY|URNITURE|STATE\\sOF\\sOKLAHOMA|WORLD\\sACCEPTANCE|CAR\\sMART|PROPERTY|VALUE\\sAUTO|RENAISSANCE\\sSCHOOL|WATER\\sCONDITIONING|NORTHCUTT|CARMART") ~ "OTHER",
                                  TRUE ~ "UNKNOWN"))
 
 debt %>% 
@@ -220,14 +227,16 @@ ggplot(year_sum, aes(file_year, n)) +
   theme_ojo() +
   theme(plot.title = element_text(hjust = 0.5)) +
   theme(plot.subtitle = element_text(hjust = 0.5)) +
+  theme(plot.caption = element_text(size = 6)) +
   labs(title = "Small claims medical debt cases",
-       subtitle = "Tulsa County 2000-2019")
+       subtitle = "Oklahoma* 2000-2019",
+       caption = "*Not included: Oklahoma, Tulsa, Cleveland, Canadian, & Comanche County")
 ```
 ``` {r}
 debt <- debt %>% 
-  mutate(plaint_cat = case_when(str_detect(iss_plaint, "SAINT FRANCIS") ~ "SAINT FRANCIS",
-                                str_detect(iss_plaint, "ST JOHN") ~ "ST JOHN",
-                                str_detect(iss_plaint, "WARREN CLINIC") ~ "WARREN CLINIC",
+  mutate(plaint_cat = case_when(str_detect(iss_plaint, "ADAIR COUNTY HEALTH CENTER") ~ "ADAIR HEALTH CENTER",
+                                str_detect(iss_plaint, "BAPTIST HEALTHCARE") ~ "BAPTIST HEALTHCARE OF OK",
+                                str_detect(iss_plaint, "INTEGRIS") ~ "INTEGRIS",
                                 TRUE ~ "OTHER"))
 
 plaint_sum <- debt %>% 
@@ -242,11 +251,16 @@ ggplot(plaint_sum, aes(file_year, n, group = plaint_cat, color = plaint_cat)) +
   theme(legend.title=element_blank())+
   theme(plot.title = element_text(hjust = 0.5, size = 14)) +
   theme(plot.subtitle = element_text(hjust = 0.5, size = 13)) +
+  #geom_text(aes(y = n + 50, label = n), family = "Menlo", size = 3) +
   theme(legend.text=element_text(size = 9))+
-  theme(legend.position="bottom")+
-  labs(title = "Small claims medical debt cases\nin Tulsa County 2000-2019",
-       subtitle = "By medical provider") +
+  theme(legend.position="bottom") +
+  theme(plot.caption = element_text(size = 6.5)) +
+  labs(title = "Small claims medical debt cases\nin Oklahoma* 2000-2019",
+       subtitle = "By medical provider", 
+       caption = "*Not included: Oklahoma, Tulsa, Cleveland, Canadian, & Comanche County") +
   scale_color_manual(values = ojo_pal) # Gives lines colors from ojo's palette
+
+
 
 ```
 
