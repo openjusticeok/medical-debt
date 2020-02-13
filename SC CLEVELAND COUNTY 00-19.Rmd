@@ -1,7 +1,7 @@
 ---
-title: "SC Cleveland County 00-19"
+title: "Small Claims: Cleveland County 00-19"
 author:
-  - Leticia, Fellow
+  - Leticia  Calvillo, Fellow
   - Open Justice Oklahoma
 date: "`r Sys.Date()`"
 output:
@@ -24,15 +24,16 @@ nc <- function(x) {comma(x, digits = 0)}
 
 Background information: Why are we researching this topic? What is the expected product? A blog post? Analysis for an internal or external partner?
 
-Using court data, this project aims to shed new light on the extent of the medical debt problem in Oklahoma.
+This project aims to shed light on the extent of medical debt in Oklahoma. The goal is to produce blog posts, fact sheets, and/or reports that emphasize the scale of the medicial debt problem in Oklahmoa and urge citizens to vote in favor of SQ 802. 
 
 > **Research Question**
+How many medical debt cases were filled in Oklahoma County small claims court each year from 2000-2019? 
 
 # Data sources
 
 Where is the data from? The ojo database? OSCN? ODCR? Crime in Oklahoma reports?
 
-The data is from the ojo database and OSCN.  
+The data is from the ojo database.  
 
 ## Timeframe
 
@@ -44,14 +45,15 @@ The analysis aims to identify trends in medical debt cases over the past 20 year
 
 What courts/counties/states are you looking at?
 
-This project will focus on medical debt collection cases in civil courts across Oklahoma.
-
+This analysis focuses on small claims court cases in Cleveland County.
 
 ## Variables
 
 What variables did you use? What types of cases, crimes, etc.?
 
-Debt collections in the state's District Court.
+This project focuses on medical debt cases.
+
+
 
 
 ## Query
@@ -65,12 +67,9 @@ sc <- ojo_query_disps("CLEVELAND", "SC", 2000:2019)
 
 
 ```
+This gives us over 137,239 rows of data. Each row in the table is a disposition; since there may be multiple dispositions per case, we should expect that the number of cases is somewhat lower.
 
 # Checking Data
-
-Explain the results of the checks of your data.
-
-The data is 99-100% complete. 
 
 ## Check for Completeness
 
@@ -79,7 +78,12 @@ If you're using court data, you can use the `ojo_check_comp` to see how complete
 ```{r}
 
 ojo_check_comp(sc)
+
+completeness
 ```
+
+The pct_complete column shows that we have nearly 100 percent of expected cases for each year.
+
 
 ## Check for NAs
 
@@ -87,26 +91,37 @@ Detail the NAs and blank items in your data and, if necessary and possible, fill
 
 
 ``` {r}
-
 nas <- sc %>%
   group_by(casenum) %>% 
   filter(all(is.na(iss_plaint) | iss_plaint == ""))
+
+nas 
 ```
+``` {r}
 
-## Check for outliers
+nas_desc <- sc %>%
+  group_by(casenum) %>% 
+  filter(all(is.na(iss_desc) | iss_desc == "")) 
 
-If you're looking at numeric data, look at the highest and lowest values and explain your procedures to deal with them in this section.
+nas_desc
+
+```
 
 # Defining Measures
 
-This is where you'll likely spend the biggest chunk of time if you're using court data. There are a lot of ways things can go wrong, so we want to be able to trace back all of our steps and document all the decisions we're making.
+## Debt Cases
+Small claims cases generally involve an eviction (called “Forcible Entry and Detainer”) or a debt of less than $5,000. To narrow down our data set, we’ll limit to cases that involve debt.That information is found in the issue description (iss_desc) column.
 
-Because each analysis project is a bit different, the number and length of subsections in this section will vary a lot. 
 ``` {r}
 sc %>% 
   count(iss_desc) %>% 
   arrange(desc(n)) 
 ```
+We see that over 64,704 cases are evictions. We can discard those. 
+
+
+We use the str_detect() function to look for rows with the character string “FORC” in order to catch both “FORCIBLE ENTRY & DETAINER” and “FORCIBLE ENTRY & DETAINER >$1500”, plus any others that may be similar. Putting a ! before it means we want the rows where the string is not detected.
+
 ``` {r}
 debt <- sc %>% 
   filter(!str_detect(iss_desc, "FORC|PROMISSORY|REPLEVIN|BREACH"))
@@ -115,6 +130,8 @@ debt %>%
   count(iss_desc) %>% 
   arrange(desc(n)) 
 ```
+Medical debt cases will be filed with “Indebtedness” issues only. We discard all other cases.
+
 ``` {r}
 debt <- debt %>% 
   filter(str_detect(iss_desc, "DEBT"))
@@ -123,23 +140,46 @@ debt %>%
   count(iss_desc) %>% 
   arrange(desc(n)) 
 ```
+
+## Medical Providers
+
+Next, we will use the mutate() function to classify the cases that have a medical provider plaintiff.
+
+Let’s start by finding the most common plaintiffs:
+
+
 ``` {r}
 debt %>% 
   count(iss_plaint) %>% 
   arrange(desc(n))  
 ```
+
+Many of the most common plaintiffs are clearly medical providers or financial institutions. We use the  case_when() function to classify all rows where one of the words is detected as being filed by a medical provider.
+
+We can also classify the names that contain “BANK” or “LOANS” as not being medical providers. The TRUE category at the end will be applied to all rows that don’t fit any previous conditions.
+
+
 ``` {r}
 debt <- debt %>% 
-  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|NEUROSURGICAL| MD|ANESTHESIA|ORTHOPAEDIC| CRNA|ENDOSCOPY| DDS| DO|GI\\sOF\\sNORMAN|MRI|NORMAN\\sREGIONAL\\sHOPITAL\\sAUTHORITY|PEDIATRICS|AMBULATORY|RADIOLOGY|ORTHOPEADIC|CHIROPRACTIC|FOOT\\s&\\sANKLE|NEUROSURGERY|SMILE\\sSOLUTIONS|CRANIOFACIAL\\sPAIN\\sASSOCIATES|UROLOGY|SURGICAL|INTEGRIS") ~ "MEDICAL",
-                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|LOANS|CITIFINANCIAL|FINAN|ELECTRIC|CASH|CHECKMATE|SYSCO|REALTY|SAND|BONDS|PROPERTIES|WORLD\\sACCEPTANCE\\sCORP|CROSSROADS\\sKIDZ\\sCLUB|INVESTMENT|PROPERTY|UNIVERSTY\\sOF\\sOKLAHOMA|UNIVERSITY\\sOF\\sOKLAHOMA|AUTO|GREENBRIAR\\sKINGSPARK\\sHOA|BRSI|JEEP|MOTOR") ~ "OTHER",
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL") ~ "MEDICAL",
+                                 str_detect(iss_plaint, "BANK|FCU") ~ "OTHER",
                                  TRUE ~ "UNKNOWN"))
+```
 
+To check how many we were able to classify, we’ll look at the count in the plaint_type column.
+``` {r}
 debt %>% 
+  ungroup %>%
   count(plaint_type) %>% 
   arrange(desc(n))
 
 
 ```
+
+To classify the remaining 222,769 cases, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
+
+To get the most common plaintiffs that are not classified yet:
+
 ``` {r}
 debt %>%
   filter(plaint_type == "UNKNOWN") %>% 
@@ -147,11 +187,31 @@ debt %>%
   arrange(desc(n)) 
 ```
 
-```{r}
+I came up with the following classification:
+
+``` {r}
+debt <- debt %>% 
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|NEUROSURGICAL| MD|ANESTHESIA|ORTHOPAEDIC| CRNA|ENDOSCOPY| DDS| DO|GI\\sOF\\sNORMAN|MRI|NORMAN\\sREGIONAL\\sHOPITAL\\sAUTHORITY|PEDIATRICS|AMBULATORY|RADIOLOGY|ORTHOPEADIC|FOOT\\s&\\sANKLE|NEUROSURGERY|SMILE\\sSOLUTIONS|CRANIOFACIAL\\sPAIN\\sASSOCIATES|UROLOGY|SURGICAL|INTEGRIS") ~ "MEDICAL",
+                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|LOANS|CITIFINANCIAL|FINAN|ELECTRIC|CASH|CHECKMATE|SYSCO|REALTY|SAND|BONDS|PROPERTIES|WORLD\\sACCEPTANCE\\sCORP|CROSSROADS\\sKIDZ\\sCLUB|INVESTMENT|PROPERTY|UNIVERSTY\\sOF\\sOKLAHOMA|UNIVERSITY\\sOF\\sOKLAHOMA|AUTO|GREENBRIAR\\sKINGSPARK\\sHOA|BRSI|JEEP|MOTOR|OKLAHOMA\\sSTATE\\sOF\\sEX|HOMEOWNERS|CHIROPRACTIC") ~ "OTHER",
+                                 TRUE ~ "UNKNOWN"))
+```
+
+This gives us a count of:
+``` {r}
 debt %>% 
   count(plaint_type) %>% 
   arrange(desc(n))
+
 ```
+
+``` {r}
+debt %>%
+  filter(plaint_type == "UNKNOWN") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+```
+
+This gives us the most common medical plaintiffs:
 ```{r}
 debt %>%
   filter(plaint_type == "MEDICAL") %>% 
@@ -159,28 +219,42 @@ debt %>%
   arrange(desc(n)) 
 
 ```
+
+To get a data frame with only the medical debt cases, filter on the plaint_type variable we created.
+
 ``` {r}
 debt <- debt %>% 
   filter(plaint_type == "MEDICAL")
 
 ```
 
-## Measure 1
-
-Describe how you defined the first measure.
 
 # Summarizing and Visualizing Data
+## Summarizing to the case level
 
-There will likely be several sections here too. Summarize and visualize the data in different ways and identify trends that you see.
+.
 ``` {r}
 debt <- debt %>% 
   group_by(casenum) %>% 
   slice(1)
 
+```
+That gives us 9,739 lawsuits filed. 
+
+
+## Summarizing by year
+To find out how many medicial debt cases were filed in Oklahoma County small claims court each year we just need to count up the number of rows with each distinct file year in our data.
+
+
+``` {r}
 year_sum <- debt %>% 
   ungroup %>%
   count(file_year)
 
+```
+
+Now we have a data frame with the number of cases filed in each year. To create a simple line plot with this data:
+``` {r}
 ggplot(year_sum, aes(file_year, n)) +
   geom_line() +
   geom_text(aes(y = n + 50, label = n), family = "Menlo", size = 3) +
@@ -192,6 +266,10 @@ ggplot(year_sum, aes(file_year, n)) +
   labs(title = "Small claims medical debt cases",
        subtitle = "Cleveland County 2000-2019")
 ```
+
+##summarizing by provider 
+The most common plaintiffs seem to be NORMAN REGIONAL, INTEGRIS, NORMAN ANESTHESIA PROVIDERS. Again, we’ll use the str_detect() function to classify the cases. 
+
 ``` {r}
 debt <- debt %>% 
   mutate(plaint_cat = case_when(str_detect(iss_plaint, "NORMAN REGIONAL") ~ "NORMAN REGIONAL HEALTH",
@@ -199,6 +277,11 @@ debt <- debt %>%
                                 str_detect(iss_plaint, "NORMAN ANESTHESIA PROVIDERS") ~ "NORMAN ANESTHESIA PROVIDERS",
                                 TRUE ~ "OTHER"))
 
+```
+
+
+Now we can see how many cases each group filed each year:
+``` {r}
 plaint_sum <- debt %>% 
   ungroup %>% # Our data frame is still grouped by casenum from the code above; ungroup to summarize using broader groups
   count(file_year, plaint_cat)
@@ -223,8 +306,12 @@ ggplot(plaint_sum, aes(file_year, n, group = plaint_cat, color = plaint_cat)) +
 ## Summary 1
 
 - How you summarized and why
+To answer the original question, I summarized by year. To take a deeper look into what is behind the general trends, I also summarized by medical provider. 
 - How you visualized the data
+I used a line graph to visualize the data. 
 - Potential leads and trends
+There is no clear trend, further data query is necessary. 
+
 
 ```{r results="asis", echo=FALSE}
 cat("
