@@ -135,6 +135,81 @@ year_nas_desc
 ```
 Almost all of the missing data for the issue description (iss_desc) column occurs in 2000. 
 
+##Filling in missing plaintiff data
+
+
+```{r}
+connect_ojo()
+
+```
+Query oscn_party_names table for missing defendant names
+```{r}
+party_names <- dbGetQuery(ojo_db, glue_sql("SELECT * FROM oscn_party_names
+                          WHERE court = 'COMANCHE'
+                          AND casenum IN ({nas_plaint$casenum*})",
+                                           .con = ojo_db))
+
+```
+
+Filter for the first plaintiff name in each case
+```{r}
+plaint_names <- party_names %>% 
+  filter(party_type == "Plaintiff") %>% 
+  group_by(casenum) %>% 
+  slice(1) %>% 
+  select(casenum, iss_plaintiff = party)
+
+```
+ 
+ Add new plaintiff names to nas_plaint dataframe
+
+```{r}
+nas_plaint <- nas_plaint %>% 
+  select(-iss_plaint) %>% 
+  left_join(plaint_names)
+```
+
+Remove rows with missing defendant names and add rows with newly queried defendant names
+
+```{r}
+sc2 <- sc%>% 
+  filter(!casenum %in% nas_plaint$casenum) %>% 
+  bind_rows(nas_plaint)
+```
+
+Check for missing defendant names in new dataframe
+```{r}
+nas_plaint <- sc2 %>%
+  group_by(casenum) %>% 
+  filter(all(is.na(iss_plaint) | iss_plaint == ""))
+```
+
+```{r}
+sc<- sc2
+```
+
+
+```{r}
+nas_plaint<- sc %>%
+  group_by(casenum) %>% 
+  filter(all(is.na(iss_plaint) | iss_plaint == "")) 
+
+nas_plaint
+
+nas_plaint <- nas_plaint %>% 
+  group_by(casenum) %>% 
+  slice(1)
+
+year_nas_plaint <- nas_plaint%>% 
+  ungroup %>%
+  count(file_year)
+
+year_nas_plaint
+
+
+
+```
+
 # Defining Measures
 
 This is where you'll likely spend the biggest chunk of time if you're using court data. There are a lot of ways things can go wrong, so we want to be able to trace back all of our steps and document all the decisions we're making.
