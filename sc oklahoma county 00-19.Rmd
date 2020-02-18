@@ -126,7 +126,20 @@ year_nas_desc
 ```
 Almost all of the missing data for the issue description (iss_desc) column occurs in 2000. 
 
+### Extract debt amount from minutes
+mins <- ojo_query_mins("OKLAHOMA", "SC", 2019, min_code = "A/")
+mins <- mins %>% 
+  mutate(debt_amt = min_desc %>% 
+           str_remove_all("[:alpha:]|\\$|,") %>% 
+           str_squish %>% 
+           as.numeric)
+
+
+
+
+
 # Defining Measures
+
 
 ## Debt Cases
 Small claims cases generally involve an eviction (called “Forcible Entry and Detainer”) or a debt of less than $5,000. To narrow down our data set, we’ll limit to cases that involve debt.That information is found in the issue description (iss_desc) column.
