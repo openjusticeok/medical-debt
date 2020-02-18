@@ -125,6 +125,32 @@ year_nas_desc
 ```
 Almost all of the missing data for the issue description (iss_desc) column occurs in 2000. 
 
+
+### Extract debt amount from minutes
+```{r}
+#mins <- ojo_query_mins("TULSA", "SC", 2000:2019, min_code = "A/")
+#mins <- mins %>% 
+  #mutate(debt_amt = min_desc %>% 
+           #str_remove_all("[:alpha:]|\\$|,") %>% 
+           #str_squish %>% 
+           #as.numeric)
+
+
+#debt_amts <- mins %>%
+  #select(casenum, debt_amt)
+```
+
+
+``` {r}
+
+#new <- inner_join(sc, debt_amts, by= "casenum")
+
+#sc <- new 
+
+
+```
+
+
 # Defining Measures
 
 ## Debt Cases
@@ -188,7 +214,6 @@ debt %>%
   ungroup %>%
   count(plaint_type) %>% 
   arrange(desc(n))
-
 
 ```
 
@@ -311,7 +336,6 @@ ggplot(plaint_sum, aes(file_year, n, group = plaint_cat, color = plaint_cat)) +
 
 ```
 
-
 ## Summary 1
 
 - How you summarized and why
@@ -320,6 +344,79 @@ To answer the original question, I summarized by year. To take a deeper look int
 I used a line graph to visualize the data. 
 - Potential leads and trends
 There seems to be a steady downward trend since the peak in 2006. 
+
+
+
+### Extract debt amount from minutes
+```{r}
+mins <- ojo_query_mins("TULSA", "SC", 2000:2019, min_code = "A/")
+mins <- mins %>% 
+  mutate(debt_amt = min_desc %>% 
+           str_remove_all("[:alpha:]|\\$|,") %>% 
+           str_squish %>% 
+           as.numeric)
+
+
+debt_amts <- mins %>%
+  select(casenum, debt_amt)
+
+
+
+new <- inner_join(sc, debt_amts, by= "casenum")
+
+
+new <- new %>% 
+  filter(str_detect(iss_desc, "DEBT"))
+
+new <- new %>% 
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|ORTHOPEDIC|MED|AHS|ANESTHESIOLOGIST|OKLAHOMA\\sHEART\\sINC|PHYSICIANS| MD|GASTROENTEROLOGY| DDS|D\\.O\\.|SAPULPA|FOOT\\sAND\\sANKLE|NOSE| DO|ANESTHESIA|UROLOGIC|ENDOSCOPY|NEUROSURGERY|NEONATOLOGY|NEUROLOGICAL|ORTHOPAEDIC|RESPIRATORY|NEUROSPINE") ~ "MEDICAL",
+                                 str_detect(iss_plaint, "BANK|LAWN|BOND|CASH|CREDIT|CAR|MOTORS|AUTO|ELECTRIC|FCU|LOAN|BURGGRAF|RENT|PAINT|PLUMBING|AIRCO|KNOX\\sINSPECTION|EMERGENCY|CDK\\sDISTRIBUTION|BCV\\sHOLDINGS| CU|VETERINARY|SINGLES\\sSTATION") ~ "OTHER",
+                                 TRUE ~ "UNKNOWN"))
+
+
+new %>% 
+  count(plaint_type) %>% 
+  arrange(desc(n))
+
+
+new %>%
+  filter(plaint_type == "UNKNOWN") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+
+
+new %>%
+  filter(plaint_type == "MEDICAL") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+
+new <- new %>% 
+  filter(plaint_type == "MEDICAL")
+
+
+new <- new %>% 
+  group_by(casenum) %>% 
+  slice(1)
+
+year_new <-new %>%
+  group_by(file_year) %>%
+  summarise(avg = median(debt_amt))
+
+year_new 
+
+
+summary(new$debt_amt)
+
+
+
+new %>%
+  group_by(file_year)%>%
+  summarise(mean = mean(debt_amt))
+
+```
+
+```
+
 
 ```{r results="asis", echo=FALSE}
 cat("
