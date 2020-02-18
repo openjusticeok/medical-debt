@@ -97,6 +97,8 @@ nas <- sc %>%
 
 nas 
 ```
+
+
 ``` {r}
 
 nas_desc <- sc %>%
@@ -105,6 +107,57 @@ nas_desc <- sc %>%
 
 nas_desc
 
+```
+
+##Filling in missing plaintiff data
+
+```{r}
+connect_ojo()
+
+```
+Query oscn_party_names table for missing plaintiffs
+```{r}
+party_names <- dbGetQuery(ojo_db, glue_sql("SELECT * FROM oscn_party_names
+                          WHERE court = 'CLEVELAND'
+                          AND casenum IN ({nas$casenum*})",
+                                           .con = ojo_db))
+
+```
+
+Filter for the first plaintiff name in each case
+```{r}
+plaint_names <- party_names %>% 
+  filter(party_type == "Plaintiff") %>% 
+  group_by(casenum) %>% 
+  slice(1) %>% 
+  select(casenum, iss_plaintiff = party)
+
+```
+ 
+ Add new plaintiff names to nas_plaint dataframe
+
+```{r}
+nas <- nas%>% 
+  select(-iss_plaint) %>% 
+  left_join(plaint_names)
+```
+Remove rows with missing defendant names and add rows with newly queried defendant names
+
+```{r}
+sc2 <- sc%>% 
+  filter(!casenum %in% nas_plaint$casenum) %>% 
+  bind_rows(nas)
+```
+
+Check for missing defendant names in new dataframe
+```{r}
+nas <- sc2 %>%
+  group_by(casenum) %>% 
+  filter(all(is.na(iss_plaint) | iss_plaint == ""))
+```
+
+```{r}
+sc<- sc2
 ```
 
 # Defining Measures
@@ -191,7 +244,9 @@ I came up with the following classification:
 
 ``` {r}
 debt <- debt %>% 
-  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|NEUROSURGICAL| MD|ANESTHESIA|ORTHOPAEDIC| CRNA|ENDOSCOPY| DDS| DO|GI\\sOF\\sNORMAN|MRI|NORMAN\\sREGIONAL\\sHOPITAL\\sAUTHORITY|PEDIATRICS|AMBULATORY|RADIOLOGY|ORTHOPEADIC|FOOT\\s&\\sANKLE|NEUROSURGERY|SMILE\\sSOLUTIONS|CRANIOFACIAL\\sPAIN\\sASSOCIATES|UROLOGY|SURGICAL|INTEGRIS") ~ "MEDICAL",
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|NEUROSURGICAL| MD|ANESTHESIA|ORTHOPAEDIC| CRNA|ENDOSCOPY| DDS| DO|GI\\sOF\\sNORMAN|MRI|NORMAN\\sREGIONAL\\sHOPITAL\\sAUTHORITY|PEDIATRICS|AMBULATORY|RADIOLOGY|ORTHOPEDIC |FOOT\\s&\\sANKLE|NEUROSURGERY|SMILE\\sSOLUTIONS|CRANIOFACIAL\\sPAIN\\sASSOCIATES|UROLOGY|SURGICAL|INTEGRIS|ORTHOPEADIC") ~ "MEDICAL",
+                                 
+                               
                                  str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|LOANS|CITIFINANCIAL|FINAN|ELECTRIC|CASH|CHECKMATE|SYSCO|REALTY|SAND|BONDS|PROPERTIES|WORLD\\sACCEPTANCE\\sCORP|CROSSROADS\\sKIDZ\\sCLUB|INVESTMENT|PROPERTY|UNIVERSTY\\sOF\\sOKLAHOMA|UNIVERSITY\\sOF\\sOKLAHOMA|AUTO|GREENBRIAR\\sKINGSPARK\\sHOA|BRSI|JEEP|MOTOR|OKLAHOMA\\sSTATE\\sOF\\sEX|HOMEOWNERS|CHIROPRACTIC") ~ "OTHER",
                                  TRUE ~ "UNKNOWN"))
 ```
@@ -199,6 +254,7 @@ debt <- debt %>%
 This gives us a count of:
 ``` {r}
 debt %>% 
+  ungroup %>% 
   count(plaint_type) %>% 
   arrange(desc(n))
 
@@ -239,7 +295,7 @@ debt <- debt %>%
   slice(1)
 
 ```
-That gives us 9,739 lawsuits filed. 
+That gives us 9,743 lawsuits filed. 
 
 
 ## Summarizing by year
