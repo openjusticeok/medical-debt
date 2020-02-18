@@ -142,7 +142,7 @@ Almost all of the missing data for the issue description (iss_desc) column occur
 connect_ojo()
 
 ```
-Query oscn_party_names table for missing defendant names
+Query oscn_party_names table for missing plaintiffs.
 ```{r}
 party_names <- dbGetQuery(ojo_db, glue_sql("SELECT * FROM oscn_party_names
                           WHERE court = 'COMANCHE'
@@ -306,6 +306,13 @@ debt %>%
 
 
 ```
+``` {r}
+debt %>%
+  filter(plaint_type == "UNKNOWN") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+```
+
 
 
 This gives us the most common medical plaintiffs:
