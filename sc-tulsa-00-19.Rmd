@@ -73,7 +73,6 @@ This gives us over 555,718 rows of data. Each row in the table is a disposition;
 If you're using court data, you can use the `ojo_check_comp` to see how complete the data is.
 
 ```{r}
-
 ojo_check_comp(sc)
 
 completeness
@@ -126,26 +125,26 @@ year_nas_desc
 Almost all of the missing data for the issue description (iss_desc) column occurs in 2000. 
 
 
-### Extract debt amount from minutes
+## Extract debt amount from minutes
 ```{r}
-#mins <- ojo_query_mins("TULSA", "SC", 2000:2019, min_code = "A/")
-#mins <- mins %>% 
-  #mutate(debt_amt = min_desc %>% 
-           #str_remove_all("[:alpha:]|\\$|,") %>% 
-           #str_squish %>% 
-           #as.numeric)
+mins <- ojo_query_mins("TULSA", "SC", 2000:2019, min_code = "A/")
+mins <- mins %>% 
+  mutate(debt_amt = min_desc %>% 
+           str_remove_all("[:alpha:]|\\$|,") %>% 
+           str_squish %>% 
+           as.numeric)
 
 
-#debt_amts <- mins %>%
-  #select(casenum, debt_amt)
+debt_amts <- mins %>%
+  select(casenum, debt_amt)
 ```
 
 
 ``` {r}
 
-#new <- inner_join(sc, debt_amts, by= "casenum")
+new <- left_join(sc, debt_amts, by= "casenum")
 
-#sc <- new 
+sc <- new 
 
 
 ```
@@ -348,72 +347,99 @@ There seems to be a steady downward trend since the peak in 2006.
 
 
 ### Extract debt amount from minutes
+
+Created a new dataframe with the median medical debt amount by file_year. 
 ```{r}
-mins <- ojo_query_mins("TULSA", "SC", 2000:2019, min_code = "A/")
-mins <- mins %>% 
-  mutate(debt_amt = min_desc %>% 
-           str_remove_all("[:alpha:]|\\$|,") %>% 
-           str_squish %>% 
-           as.numeric)
+debt_new <-new %>%
+  group_by(file_year) %>%
+  summarise(avg = median(debt_amt, na.rm = TRUE))
 
+debt_new 
+```
 
-debt_amts <- mins %>%
-  select(casenum, debt_amt)
+Created a new dataframe to find the the number of cases for each file_year. 
 
-
-
-new <- inner_join(sc, debt_amts, by= "casenum")
-
-
-new <- new %>% 
-  filter(str_detect(iss_desc, "DEBT"))
-
-new <- new %>% 
-  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|ORTHOPEDIC|MED|AHS|ANESTHESIOLOGIST|OKLAHOMA\\sHEART\\sINC|PHYSICIANS| MD|GASTROENTEROLOGY| DDS|D\\.O\\.|SAPULPA|FOOT\\sAND\\sANKLE|NOSE| DO|ANESTHESIA|UROLOGIC|ENDOSCOPY|NEUROSURGERY|NEONATOLOGY|NEUROLOGICAL|ORTHOPAEDIC|RESPIRATORY|NEUROSPINE") ~ "MEDICAL",
-                                 str_detect(iss_plaint, "BANK|LAWN|BOND|CASH|CREDIT|CAR|MOTORS|AUTO|ELECTRIC|FCU|LOAN|BURGGRAF|RENT|PAINT|PLUMBING|AIRCO|KNOX\\sINSPECTION|EMERGENCY|CDK\\sDISTRIBUTION|BCV\\sHOLDINGS| CU|VETERINARY|SINGLES\\sSTATION") ~ "OTHER",
-                                 TRUE ~ "UNKNOWN"))
-
-
-new %>% 
-  count(plaint_type) %>% 
-  arrange(desc(n))
-
-
-new %>%
-  filter(plaint_type == "UNKNOWN") %>% 
-  count(iss_plaint) %>% 
-  arrange(desc(n)) 
-
-
-new %>%
-  filter(plaint_type == "MEDICAL") %>% 
-  count(iss_plaint) %>% 
-  arrange(desc(n)) 
-
-new <- new %>% 
-  filter(plaint_type == "MEDICAL")
-
-
+```{r}
 new <- new %>% 
   group_by(casenum) %>% 
   slice(1)
 
-year_new <-new %>%
-  group_by(file_year) %>%
-  summarise(avg = median(debt_amt))
+year_new <- new%>% 
+  ungroup %>%
+  count(file_year)
 
-year_new 
+year_new
+```
 
+Created a new dataframe to count the nas by file year. 
+```{r}
 
-summary(new$debt_amt)
+nas_debt_amt <- new %>% 
+  group_by(casenum) %>% 
+  filter(all(is.na(debt_amt) | debt_amt == "NA")) 
 
+nas_debt_amt
 
+nas_debt_amt <- nas_debt_amt %>% 
+  group_by(casenum) %>% 
+  slice(1)
 
-new %>%
-  group_by(file_year)%>%
-  summarise(mean = mean(debt_amt))
+year_nas_debt_amt <- nas_debt_amt%>% 
+  ungroup %>%
+  count(file_year)
+
+year_nas_debt_amt
+
 
 ```
+
+
+Used the case_when() function to classify all rows into missing or not missing the debt amount. 
+```{r}
+new <- new %>% 
+  mutate(debt_amt_na = case_when(str_detect(debt_amt, "") ~ "FALSE",
+                                 TRUE ~ "TRUE"))
+                              
+```
+
+Counted the NAs in the dataframe new. 
+```{r}
+new %>%
+  ungroup %>%
+  count(debt_amt_na) %>%
+  arrange(desc(n))
+
+
+```
+
+Counted nas by year again. Might be irrelevant. 
+
+Created a new dataframe with only the cases that have a missing debt amount.
+```{r}
+
+new_nas_debt_amt <- new %>% 
+  group_by(casenum) %>% 
+  filter(all(is.na(debt_amt) | debt_amt == "")) 
+
+new_nas_debt_amt
+```
+
+Summarize at the case level.
+```{r}
+new_nas_debt_amt <- new_nas_debt_amt %>% 
+  group_by(casenum) %>% 
+  slice(1)
+```
+
+To find out how many cases had missing debt amounts by year we just need to count up the number of rows with each distinct file year in our data.
+
+``` {r}
+new_year_nas_debt_amt <- new_nas_debt_amt%>% 
+  ungroup %>%
+  count(file_year)
+
+new_year_nas_debt_amt
+
 
 ```
 
