@@ -62,7 +62,6 @@ If you're using data from the OJO database, include the query you used to pull y
 sc <- ojo_query_disps("COMANCHE", "SC", 2000:2019) 
 
 
-
 ```
 
 This gives us over 89,510 rows of data. Each row in the table is a disposition; since there may be multiple dispositions per case, we should expect that the number of cases is somewhat lower.
@@ -209,6 +208,32 @@ year_nas_plaint
 
 
 ```
+
+
+Next, we will add the debt amounts to our dataset.
+## Extract debt amount from minutes
+```{r}
+mins <- ojo_query_mins("COMANCHE", "SC", 2000:2019, min_code = "A/")
+mins <- mins %>% 
+  mutate(debt_amt = min_desc %>% 
+           str_remove_all("[:alpha:]|\\$|,") %>% 
+           str_squish %>% 
+           as.numeric)
+
+
+debt_amts <- mins %>%
+  select(casenum, debt_amt)
+```
+
+``` {r}
+
+new <- left_join(sc, debt_amts, by= "casenum")
+
+sc <- new 
+
+
+```
+
 
 # Defining Measures
 
@@ -412,6 +437,45 @@ ggplot(plaint_sum, aes(file_year, n, group = plaint_cat, color = plaint_cat)) +
 
 
 ```
+
+
+### Find median debt amount
+
+Created a new dataframe with the median medical debt amount by file_year. 
+
+
+```{r}
+debt_new <-sc%>%
+  group_by(file_year) %>%
+  summarise(n_cases = n(),
+            n_cases_with_debt = sum(!is.na(debt_amt)),
+            avg = median(debt_amt, na.rm = TRUE)) %>% 
+  mutate(pct_with_debt = n_cases_with_debt/n_cases)
+
+debt_new 
+
+```
+
+
+### Graph median medical debt by year 
+
+```{r}
+
+ggplot(debt_new, aes(x= file_year, y= avg)) +
+  geom_line() +
+  #geom_text(aes(y = avg + 50, label = avg), family = "Menlo", size = 3) +
+  xlab("Year") + ylab("Amount") +
+  ylim(0, NA) + # Extends y-axis down to zero
+  theme_ojo() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.subtitle = element_text(hjust = 0.5)) +
+  labs(title = "Median medical debt amount",
+       subtitle = "Comanche County 2000-2019")
+
+
+```
+
+
 
 ## Summary 1
 
