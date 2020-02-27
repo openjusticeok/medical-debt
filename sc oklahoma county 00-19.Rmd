@@ -126,7 +126,10 @@ year_nas_desc
 ```
 Almost all of the missing data for the issue description (iss_desc) column occurs in 2000. 
 
+
+
 ### Extract debt amount from minutes
+```{r}
 mins <- ojo_query_mins("OKLAHOMA", "SC", 2019, min_code = "A/")
 mins <- mins %>% 
   mutate(debt_amt = min_desc %>% 
@@ -134,12 +137,17 @@ mins <- mins %>%
            str_squish %>% 
            as.numeric)
 
+```
 
+``` {r}
 
+new <- left_join(sc, debt_amts, by= "casenum")
 
+sc <- new 
+
+```
 
 # Defining Measures
-
 
 ## Debt Cases
 Small claims cases generally involve an eviction (called “Forcible Entry and Detainer”) or a debt of less than $5,000. To narrow down our data set, we’ll limit to cases that involve debt.That information is found in the issue description (iss_desc) column.
@@ -316,6 +324,44 @@ ggplot(plaint_sum, aes(file_year, n, group = plaint_cat, color = plaint_cat)) +
   labs(title = "Small claims medical debt cases\nin Oklahoma County 2000-2019",
        subtitle = "By medical provider") +
   scale_color_manual(values = ojo_pal) # Gives lines colors from ojo's palette
+
+```
+
+
+### Find median debt amount
+
+Created a new dataframe with the median medical debt amount by file_year. 
+
+
+```{r}
+debt_new <-sc%>%
+  group_by(file_year) %>%
+  summarise(n_cases = n(),
+            n_cases_with_debt = sum(!is.na(debt_amt)),
+            avg = median(debt_amt, na.rm = TRUE)) %>% 
+  mutate(pct_with_debt = n_cases_with_debt/n_cases)
+
+debt_new 
+
+```
+
+
+
+### Graph median medical debt by year 
+
+```{r}
+
+ggplot(debt_new, aes(x= file_year, y= avg)) +
+  geom_line() +
+  #geom_text(aes(y = avg + 50, label = avg), family = "Menlo", size = 3) +
+  xlab("Year") + ylab("Amount") +
+  ylim(0, NA) + # Extends y-axis down to zero
+  theme_ojo() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.subtitle = element_text(hjust = 0.5)) +
+  labs(title = "Median medical debt amount",
+       subtitle = "Oklahoma County 2000-2019")
+
 
 ```
 
