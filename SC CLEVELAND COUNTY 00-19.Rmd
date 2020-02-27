@@ -54,8 +54,6 @@ What variables did you use? What types of cases, crimes, etc.?
 This project focuses on medical debt cases.
 
 
-
-
 ## Query
 
 If you're using data from the OJO database, include the query you used to pull your data. This may be a function that starts `ojo_query_` or `dbGetQuery`.
@@ -85,6 +83,12 @@ completeness
 The pct_complete column shows that we have nearly 100 percent of expected cases for each year.
 
 
+```{r}
+oscn_scrape_remaining("CLEVELAND", "SC", 2008)
+oscn_scrape_remaining("CLEVELAND", "SC", 2017)
+
+
+```
 ## Check for NAs
 
 Detail the NAs and blank items in your data and, if necessary and possible, fill them in.
@@ -158,6 +162,25 @@ nas <- sc2 %>%
 
 ```{r}
 sc<- sc2
+```
+
+
+### Extract debt amount from minutes
+```{r}
+mins <- ojo_query_mins("CLEVELAND", "SC", 2019, min_code = "A/")
+mins <- mins %>% 
+  mutate(debt_amt = min_desc %>% 
+           str_remove_all("[:alpha:]|\\$|,") %>% 
+           str_squish %>% 
+           as.numeric)
+
+```
+
+``` {r}
+
+new <- left_join(sc, debt_amts, by= "casenum")
+
+sc <- new 
 ```
 
 # Defining Measures
@@ -355,6 +378,43 @@ ggplot(plaint_sum, aes(file_year, n, group = plaint_cat, color = plaint_cat)) +
   labs(title = "Small claims medical debt cases\nin Cleveland County 2000-2019",
        subtitle = "By medical provider") +
   scale_color_manual(values = ojo_pal) # Gives lines colors from ojo's palette
+
+```
+
+
+
+### Find median debt amount
+
+Created a new dataframe with the median medical debt amount by file_year. 
+
+
+```{r}
+debt_new <-sc%>%
+  group_by(file_year) %>%
+  summarise(n_cases = n(),
+            n_cases_with_debt = sum(!is.na(debt_amt)),
+            avg = median(debt_amt, na.rm = TRUE)) %>% 
+  mutate(pct_with_debt = n_cases_with_debt/n_cases)
+
+debt_new 
+
+```
+
+
+### Graph median medical debt by year 
+
+```{r}
+ggplot(debt_new, aes(x= file_year, y= avg)) +
+  geom_line() +
+  #geom_text(aes(y = avg + 50, label = avg), family = "Menlo", size = 3) +
+  xlab("Year") + ylab("Amount") +
+  ylim(0, NA) + # Extends y-axis down to zero
+  theme_ojo() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.subtitle = element_text(hjust = 0.5)) +
+  labs(title = "Median medical debt amount",
+       subtitle = "Cleveland County 2000-2019")
+
 
 ```
 
