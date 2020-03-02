@@ -126,8 +126,6 @@ year_nas_desc
 ```
 Almost all of the missing data for the issue description (iss_desc) column occurs in 2000. 
 
-
-
 ### Extract debt amount from minutes
 ```{r}
 mins <- ojo_query_mins("OKLAHOMA", "SC", 2019, min_code = "A/")
@@ -156,7 +154,7 @@ sc %>%
   count(iss_desc) %>% 
   arrange(desc(n)) 
 ```
-We see that over 309,479 cases are evictions. We can discard those. 
+We see that over 343,039 cases are evictions. We can discard those. 
 
 
 We use the str_detect() function to look for rows with the character string “FORC” in order to catch both “FORCIBLE ENTRY & DETAINER” and “FORCIBLE ENTRY & DETAINER >$1500”, plus any others that may be similar. Putting a ! before it means we want the rows where the string is not detected.
@@ -213,7 +211,7 @@ debt %>%
 
 ```
 
-To classify the remaining 222,769 cases, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
+To classify the remaining 248,557 cases, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
 
 To get the most common plaintiffs that are not classified yet:
 
@@ -228,11 +226,10 @@ I came up with the following classification:
 
 ``` {r}
 debt <- debt %>% 
-  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|SURGICARE|INTEGRIS\\sAMBULATORY|CARDIOLOGY|TERENCE\\sC\\sTOFT\\sDDS|DENTIST|DENTAL|SURGERY|ORTHOPEDICS|INTEGRIS|ALLIED\\sPHYSICIANS\\sGROUP|SURGICAL|D\\.D\\.S\\.|ADVANCES\\sIN\\sDENTISTRY|MANORCARE|ANESTHESIOLOGY|OU\\sPHYSICIANS|PULMONARY|PHARMACEUTICALS|RADIOLOGY| DDS|PEDIATRICS|MRI") ~ "MEDICAL",
-                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|WORLD\\sACCEPTANCE|INVESTMENT|FINANCE|MONEY|MOTORS|CASH|B\\s&\\sF|PROFESSIONAL\\sINSURANCE\\sAGENCY\\sCORP|SOUTHWESTERN\\sBELL\\sYELLOW\\sPAGES|SINGLETON\\sENTERPRISES|B&F|B\\sAND\\sF|MANHATTAN\\sMANAGEMENT\\sCOMPANY|ROYAL\\sPRESTIGE|BONDS|TELEPHONE|DEPARTMENT\\sSTORES|AUTO|HOME|ADVANCE\\sAMERICA|STATE\\sOF\\sOKLAHOMA|ROCK\\sKNOLL\\sASSOCIATION|B&\\sF|ELECTRIC|RENT\\sA\\sCENTER|LIBERTY\\sBONDING|DEPARTMENT\\sOF\\sTRANSPORTATION|COMPREHENSIVE\\sTHERAPY\\sSERVICES|PHYSICAL\\sTHERAPY|COMPREHENSIVETHERAPY|PHYSICAL\\sTHERAPY") ~ "OTHER",
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|SURGICARE|INTEGRIS\\sAMBULATORY|TERENCE\\sC\\sTOFT\\sDDS|DENTIST|DENTAL|SURGERY|INTEGRIS|ALLIED\\sPHYSICIANS\\sGROUP|SURGICAL|D\\.D\\.S\\.|ADVANCES\\sIN\\sDENTISTRY|OU\\sPHYSICIANS| DDS|COMPREHENSIVE\\sTHERAPY\\sSERVICES|PHYSICAL\\sTHERAPY|COMPREHENSIVETHERAPY|PHYSICAL\\sTHERAPY|PEDIATRICS") ~ "MEDICAL",
+                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|WORLD\\sACCEPTANCE|INVESTMENT|FINANCE|MONEY|MOTORS|CASH|B\\s&\\sF|PROFESSIONAL\\sINSURANCE\\sAGENCY\\sCORP|SOUTHWESTERN\\sBELL\\sYELLOW\\sPAGES|SINGLETON\\sENTERPRISES|B&F|B\\sAND\\sF|MANHATTAN\\sMANAGEMENT\\sCOMPANY|ROYAL\\sPRESTIGE|BONDS|TELEPHONE|DEPARTMENT\\sSTORES|AUTO|HOME|ADVANCE\\sAMERICA|STATE\\sOF\\sOKLAHOMA|ROCK\\sKNOLL\\sASSOCIATION|B&\\sF|ELECTRIC|RENT\\sA\\sCENTER|LIBERTY\\sBONDING|DEPARTMENT\\sOF\\sTRANSPORTATION|ORTHOPAEDIC|MANORCARE|CARDIOLOGY") ~ "OTHER",
                                  TRUE ~ "UNKNOWN"))
 ```
-
 
 
 This gives us a count of:
@@ -243,6 +240,13 @@ debt %>%
   arrange(desc(n))
 ```
 
+``` {r}
+debt %>%
+  filter(plaint_type == "UNKNOWN") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+```
+
 This gives us the most common medical plaintiffs:
 ```{r}
 debt %>%
@@ -251,6 +255,7 @@ debt %>%
   arrange(desc(n)) 
 
 ```
+
 
 To get a data frame with only the medical debt cases, filter on the plaint_type variable we created.
 
@@ -269,7 +274,7 @@ debt <- debt %>%
   slice(1)
 
 ```
-That gives us 27,016 lawsuits filed. 
+That gives us 26,533 lawsuits filed. 
 
 ## Summarizing by year
 To find out how many medicial debt cases were filed in Oklahoma County small claims court each year we just need to count up the number of rows with each distinct file year in our data.
@@ -352,7 +357,7 @@ debt_new
 
 ggplot(debt_new, aes(x= file_year, y= avg)) +
   geom_line() +
-  #geom_text(aes(y = avg + 50, label = avg), family = "Menlo", size = 3) +
+  geom_text(aes(y = avg + 50, label = avg), family = "Menlo", size = 2) +
   xlab("Year") + ylab("Amount") +
   ylim(0, NA) + # Extends y-axis down to zero
   theme_ojo() +
