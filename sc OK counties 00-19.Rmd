@@ -92,13 +92,12 @@ Since the pct_complete column shows that we are missing some of the expected cas
 
 #oscn_scrape_remaining("ROGERS", "SC", 2000:2019)
 
-#oscn_scrape("LOGAN", "SC", 2000:2019)
-
 #oscn_scrape_remaining("GARFIELD", "SC", 2000:2019)
 
-
-
 #oscn_scrape_remaining("PAYNE", "SC", 2000:2019)
+
+
+#oscn_scrape("LOGAN", "SC", 2000:2019)
 
 #oscn_scrape_remaining("ELLIS", "SC", 2000:2019)
 
@@ -112,7 +111,7 @@ ojo_check_comp(other_counties)
 
 completeness
 
-````
+```
 Even after scraping the pct_complete column shows that we are missing some of the expected cases for Adiar 2000-2005, Ellis 2000-2004, Logan 2019, and Pushmataha 2019. 
 
 ## Check for NAs
@@ -163,7 +162,40 @@ year_nas_desc
 
 
 ```
+Next, we will add the debt amounts to our dataset.
+## Extract debt amount from minutes
+```{r}
+mins <- ojo_query_mins(c( "ROGERS", "ROGERMILLS", "PUSHMATAHA", "PAYNE", "LOGAN", "GARFIELD", "ELLIS", "ADAIR"), "SC", 2000:2019, min_code = "A/")
+mins <- mins %>% 
+  mutate(debt_amt = min_desc %>% 
+           str_remove_all("[:alpha:]|\\$|,") %>% 
+           str_squish %>% 
+           as.numeric)
 
+
+debt_amts <- mins %>%
+  select(casenum, debt_amt)
+
+
+
+```
+
+``` {r}
+
+new <- left_join(other_counties, debt_amts, by= "casenum")
+
+other_counties <- new
+
+
+```
+
+Find the number of SC cases 2000-2019 
+```{r}
+#other_counties <- other_counties %>% 
+  #group_by(casenum) %>% 
+  #slice(1)
+```
+There are 29,737 small claims cases in this time period. 
 
 # Defining Measures
 
@@ -250,7 +282,7 @@ I came up with the following classification:
 
 ``` {r}
 debt <- debt %>% 
-  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|AMBULANCE|INTEGRIS| DDS|DENTAL") ~ "MEDICAL",
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|AMBULANCE|INTEGRIS| DDS|DENTAL|PHYSICAL\\sTHERAPY|SURGERY|THERAPY\\sINNOVATIONS|UROLOGY") ~ "MEDICAL",
                                  str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANC|CASH|MONEY|URNITURE|STATE\\sOF\\sOKLAHOMA|WORLD\\sACCEPTANCE|CAR\\sMART|PROPERTY|VALUE\\sAUTO|RENAISSANCE\\sSCHOOL|WATER\\sCONDITIONING|NORTHCUTT|CARMART") ~ "OTHER",
                                  TRUE ~ "UNKNOWN"))
 ```
@@ -262,6 +294,14 @@ debt %>%
   arrange(desc(n))
 
 ```
+
+``` {r}
+debt %>%
+  filter(plaint_type == "UNKNOWN") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+```
+
 
 This gives us the most common medical plaintiffs:
 ```{r}
@@ -315,7 +355,7 @@ ggplot(year_sum, aes(file_year, n)) +
   theme(plot.subtitle = element_text(hjust = 0.5)) +
   theme(plot.caption = element_text(size = 8)) +
   labs(title = "Small claims medical debt cases",
-       subtitle = "Oklahoma* 2000-2019",
+       subtitle = "OSCN Counties* 2000-2019",
        caption = "*Included: Rogers, Rogermills, Pushmataha, Payne, Logan, Garfield, Ellis, Adair")
 ```
 
@@ -348,11 +388,44 @@ ggplot(plaint_sum, aes(file_year, n, group = plaint_cat, color = plaint_cat)) +
   theme(legend.text=element_text(size = 9))+
   theme(legend.position="bottom") +
   theme(plot.caption = element_text(size = 8)) +
-  labs(title = "Small claims medical debt cases\nin Oklahoma* 2000-2019",
+  labs(title = "Small claims medical debt cases\nin OSCN counties* 2000-2019",
        subtitle = "By medical provider", 
        caption = "*Included: Rogers, Rogermills, Pushmataha, Payne, Logan, Garfield, Ellis, Adair") +
   scale_color_manual(values = ojo_pal) # Gives lines colors from ojo's palette
 
+
+
+```
+
+
+
+```{r}
+debt_new <-debt%>%
+  group_by(file_year) %>%
+  summarise(n_cases = n(),
+            n_cases_with_debt = sum(!is.na(debt_amt)),
+            avg = median(debt_amt, na.rm = TRUE)) %>% 
+  mutate(pct_with_debt = n_cases_with_debt/n_cases)
+
+debt_new 
+
+```
+
+
+### Graph median medical debt by year 
+
+```{r}
+
+ggplot(debt_new, aes(x= file_year, y= avg)) +
+  geom_line() +
+  #geom_text(aes(y = avg + 50, label = avg), family = "Menlo", size = 3) +
+  xlab("Year") + ylab("Amount") +
+  ylim(0, NA) + # Extends y-axis down to zero
+  theme_ojo() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.subtitle = element_text(hjust = 0.5)) +
+  labs(title = "Median medical debt amount",
+       subtitle = "Ok Counties 2000-2019")
 
 
 ```
@@ -365,6 +438,9 @@ To answer the original question, I summarized by year. To take a deeper look int
 I used a line graph to visualize the data. 
 - Potential leads and trends
 Medical debt cases peaked in 2008.There seems to be a gradual decline in medical debt cases in SC. 
+
+
+
 
 ```{r results="asis", echo=FALSE}
 cat("

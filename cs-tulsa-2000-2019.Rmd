@@ -1,5 +1,5 @@
 ---
-title: "Small Claims: Tulsa County 00-19"
+title: "CS: Tulsa County 00-19"
 author:
   - Leticia, Fellow
   - Open Justice Oklahoma
@@ -23,7 +23,7 @@ nc <- function(x) {comma(x, digits = 0)}
 ```
 Background information: Why are we researching this topic? What is the expected product? A blog post? Analysis for an internal or external partner?
 
-This project aims to shed light on the extent of medical debt in Oklahoma. The goal is to produce blog posts, fact sheets, and/or reports that emphasize the scale of the medicial debt problem in Oklahmoa and urge citizens to vote in favor of SQ 802. 
+This project aims to shed light on the extent of medical debt in Oklahoma. The goal is to produce blog posts, fact sheets, and/or reports that emphasize the scale of the medicial debt problem in Oklahoma and urge citizens to vote in favor of SQ 802. 
 
 > **Research Question**
 How many medical debt cases were filled in Oklahoma County small claims court each year from 2000-2019? 
@@ -44,7 +44,7 @@ The analysis aims to identify trends in medical debt cases over the past 20 year
 
 What courts/counties/states are you looking at?
 
-This analysis focuses on small claims court cases in Tulsa County.
+This analysis focuses on CS court cases in Tulsa County.
 
 ## Variables
 
@@ -58,7 +58,7 @@ If you're using data from the OJO database, include the query you used to pull y
 
 ``` {r}
 
-CS <- ojo_query_disps("TULSA", "CS", 2000:2019) 
+CS<- ojo_query_disps("TULSA", "CS", 2000:2019) 
 
 
 
@@ -148,12 +148,20 @@ CS <- new
 
 
 ```
+Find number of CS cases 
+
+``` {r}
+#CS <- CS %>% 
+  #group_by(casenum) %>% 
+  #slice(1)
+```
+That gives us 184,003 lawsuits filed. 
 
 
 # Defining Measures
 
 ## Debt Cases
-cs cases generally involve a debt of less than $10,00. To narrow down our data set, we’ll limit to cases that involve debt.That information is found in the issue description (iss_desc) column.
+cs cases generally involve a debt of less than $10,000. To narrow down our data set, we’ll limit to cases that involve debt.That information is found in the issue description (iss_desc) column.
 
 ``` {r}
 CS %>% 
@@ -350,7 +358,7 @@ Created a new dataframe with the median medical debt amount by file_year.
 
 
 ```{r}
-debt_new <-CS%>%
+debt_new <- debt%>%
   group_by(file_year) %>%
   summarise(n_cases = n(),
             n_cases_with_debt = sum(!is.na(debt_amt)),

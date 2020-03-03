@@ -234,7 +234,14 @@ sc <- new
 
 ```
 
+Summarize case number
+``` {r}
+#sc <- sc %>% 
+  #group_by(casenum) %>% 
+  #slice(1)
+```
 
+There are 83,732 small claims cases 
 # Defining Measures
 
 This is where you'll likely spend the biggest chunk of time if you're using court data. There are a lot of ways things can go wrong, so we want to be able to trace back all of our steps and document all the decisions we're making.
@@ -246,7 +253,7 @@ sc %>%
   count(iss_desc) %>% 
   arrange(desc(n)) 
 ```
-We see that over 38,236 cases are evictions. We can discard those. 
+We see that over 38,148 cases are evictions. We can discard those. 
 
 We use the str_detect() function to look for rows with the character string “FORC” in order to catch both “FORCIBLE ENTRY & DETAINER” and “FORCIBLE ENTRY & DETAINER >$1500”, plus any others that may be similar. Putting a ! before it means we want the rows where the string is not detected.
 
@@ -302,7 +309,7 @@ debt %>%
 
 
 ```
-To classify the remaining 43,167 cases, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
+To classify the remaining 43,088 cases, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
 
 To get the most common plaintiffs that are not classified yet:
 
@@ -445,7 +452,7 @@ Created a new dataframe with the median medical debt amount by file_year.
 
 
 ```{r}
-debt_new <-sc%>%
+debt_new <- debt%>%
   group_by(file_year) %>%
   summarise(n_cases = n(),
             n_cases_with_debt = sum(!is.na(debt_amt)),

@@ -78,17 +78,12 @@ If you're using court data, you can use the `ojo_check_comp` to see how complete
 ojo_check_comp(sc)
 
 completeness
+
 ```
 
 The pct_complete column shows that we have nearly 100 percent of expected cases for each year.
 
 
-```{r}
-oscn_scrape_remaining("CLEVELAND", "SC", 2008)
-oscn_scrape_remaining("CLEVELAND", "SC", 2017)
-
-
-```
 ## Check for NAs
 
 Detail the NAs and blank items in your data and, if necessary and possible, fill them in.
@@ -167,12 +162,15 @@ sc<- sc2
 
 ### Extract debt amount from minutes
 ```{r}
-mins <- ojo_query_mins("CLEVELAND", "SC", 2019, min_code = "A/")
+mins <- ojo_query_mins("CLEVELAND", "SC", 2000:2019, min_code = "A/")
 mins <- mins %>% 
   mutate(debt_amt = min_desc %>% 
            str_remove_all("[:alpha:]|\\$|,") %>% 
            str_squish %>% 
            as.numeric)
+
+debt_amts <- mins %>%
+  select(casenum, debt_amt)
 
 ```
 
@@ -183,6 +181,15 @@ new <- left_join(sc, debt_amts, by= "casenum")
 sc <- new 
 ```
 
+All SC cases by 
+```{r}
+#sc <- sc %>% 
+  #group_by(casenum) %>% 
+  #slice(1)
+
+```
+
+There are 108,695 small claims cases. 
 # Defining Measures
 
 ## Debt Cases
@@ -193,7 +200,7 @@ sc %>%
   count(iss_desc) %>% 
   arrange(desc(n)) 
 ```
-We see that over 64,704 cases are evictions. We can discard those. 
+We see that over 92,836 cases are evictions. We can discard those. 
 
 
 We use the str_detect() function to look for rows with the character string “FORC” in order to catch both “FORCIBLE ENTRY & DETAINER” and “FORCIBLE ENTRY & DETAINER >$1500”, plus any others that may be similar. Putting a ! before it means we want the rows where the string is not detected.
@@ -252,7 +259,7 @@ debt %>%
 
 ```
 
-To classify the remaining 222,769 cases, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
+To classify the remaining 873,44 cases, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
 
 To get the most common plaintiffs that are not classified yet:
 
@@ -267,17 +274,23 @@ I came up with the following classification:
 
 ``` {r}
 debt <- debt %>% 
-  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|NEUROSURGICAL| MD|ANESTHESIA|ORTHOPAEDIC| CRNA|ENDOSCOPY| DDS| DO|GI\\sOF\\sNORMAN|MRI|NORMAN\\sREGIONAL\\sHOPITAL\\sAUTHORITY|PEDIATRICS|AMBULATORY|RADIOLOGY|ORTHOPEDIC |FOOT\\s&\\sANKLE|NEUROSURGERY|SMILE\\sSOLUTIONS|CRANIOFACIAL\\sPAIN\\sASSOCIATES|UROLOGY|SURGICAL|INTEGRIS|ORTHOPEADIC") ~ "MEDICAL",
-                                 
-                               
-                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|LOANS|CITIFINANCIAL|FINAN|ELECTRIC|CASH|CHECKMATE|SYSCO|REALTY|SAND|BONDS|PROPERTIES|WORLD\\sACCEPTANCE\\sCORP|CROSSROADS\\sKIDZ\\sCLUB|INVESTMENT|PROPERTY|UNIVERSTY\\sOF\\sOKLAHOMA|UNIVERSITY\\sOF\\sOKLAHOMA|AUTO|GREENBRIAR\\sKINGSPARK\\sHOA|BRSI|JEEP|MOTOR|OKLAHOMA\\sSTATE\\sOF\\sEX|HOMEOWNERS|CHIROPRACTIC") ~ "OTHER",
+  mutate(plaint_type = case_when(str_detect(iss_plaint,
+"HEALTH|CLINIC|MEDICAL|HOSPITAL| MD|ANESTHESIA| CRNA|ENDOSCOPY| DDS| DO|MRI|NORMAN\\sREGIONAL\\sHOPITAL\\sAUTHORITY|PEDIATRICS|AMBULATORY|RADIOLOGY|SMILE\\sSOLUTIONS|SURGICAL|INTEGRIS|NEUROSURGICAL|ORTHOPAEDIC|GI\\sOF\\sNORMAN|ORTHOPEDIC|NEUROSURGERY|PAIN\\sASSOCIATES|UROLOGY|ORTHOPEADIC|CHIROPRACTIC|ANKLE\\sSPECIALISTS") ~ "MEDICAL",
+                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|LOANS|CITIFINANCIAL|FINAN|ELECTRIC|CASH|CHECKMATE|SYSCO|REALTY|SAND|BONDS|PROPERTIES|WORLD\\sACCEPTANCE\\sCORP|CROSSROADS\\sKIDZ\\sCLUB|INVESTMENT|PROPERTY|UNIVERSTY\\sOF\\sOKLAHOMA|AUTO|GREENBRIAR\\sKINGSPARK\\sHOA|BRSI|JEEP|MOTOR|OKLAHOMA\\sSTATE\\sOF\\sEX|HOMEOWNERS") ~ "OTHER",
                                  TRUE ~ "UNKNOWN"))
+
+
+
+
+
+
+#|FOOT\\s&\\sANKLE|CRANIOFACIAL
 ```
 
 This gives us a count of:
 ``` {r}
 debt %>% 
-  ungroup %>% 
+  ungroup %>%
   count(plaint_type) %>% 
   arrange(desc(n))
 
@@ -285,6 +298,7 @@ debt %>%
 
 ``` {r}
 debt %>%
+  ungroup %>%
   filter(plaint_type == "UNKNOWN") %>% 
   count(iss_plaint) %>% 
   arrange(desc(n)) 
@@ -389,7 +403,7 @@ Created a new dataframe with the median medical debt amount by file_year.
 
 
 ```{r}
-debt_new <-sc%>%
+debt_new <-debt %>%
   group_by(file_year) %>%
   summarise(n_cases = n(),
             n_cases_with_debt = sum(!is.na(debt_amt)),
@@ -426,8 +440,7 @@ To answer the original question, I summarized by year. To take a deeper look int
 - How you visualized the data
 I used a line graph to visualize the data. 
 - Potential leads and trends
-There is no clear trend, further data query is necessary. 
-
+There was a clear upward trend followed by a decline in number of medcial debt cases. 
 
 ```{r results="asis", echo=FALSE}
 cat("

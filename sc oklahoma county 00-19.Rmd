@@ -18,7 +18,6 @@ output:
 library(ojo)
 library(knitr)
 
-
 nc <- function(x) {comma(x, digits = 0)}
 
 ```
@@ -86,7 +85,6 @@ The pct_complete column shows that we have nearly 100 percent of expected cases 
 Detail the NAs and blank items in your data and, if necessary and possible, fill them in.
 
 ``` {r}
-
 nas_plaint <- sc %>%
   group_by(casenum) %>% 
   filter(all(is.na(iss_plaint) | iss_plaint == "")) 
@@ -128,12 +126,18 @@ Almost all of the missing data for the issue description (iss_desc) column occur
 
 ### Extract debt amount from minutes
 ```{r}
-mins <- ojo_query_mins("OKLAHOMA", "SC", 2019, min_code = "A/")
+mins <- ojo_query_mins("OKLAHOMA", "SC", 2000:2019, min_code = "A/")
 mins <- mins %>% 
   mutate(debt_amt = min_desc %>% 
            str_remove_all("[:alpha:]|\\$|,") %>% 
            str_squish %>% 
            as.numeric)
+
+debt_amts <- mins %>%
+  select(casenum, debt_amt)
+
+
+#odcr_show("TULSA", "SC", 2000, 62)
 
 ```
 
@@ -144,6 +148,15 @@ new <- left_join(sc, debt_amts, by= "casenum")
 sc <- new 
 
 ```
+Summarize all small claims by case level 
+``` {r}
+#sc <- sc %>% 
+  #group_by(casenum) %>% 
+  #slice(1)
+
+```
+
+510,940
 
 # Defining Measures
 
@@ -226,9 +239,12 @@ I came up with the following classification:
 
 ``` {r}
 debt <- debt %>% 
-  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|SURGICARE|INTEGRIS\\sAMBULATORY|TERENCE\\sC\\sTOFT\\sDDS|DENTIST|DENTAL|SURGERY|INTEGRIS|ALLIED\\sPHYSICIANS\\sGROUP|SURGICAL|D\\.D\\.S\\.|ADVANCES\\sIN\\sDENTISTRY|OU\\sPHYSICIANS| DDS|COMPREHENSIVE\\sTHERAPY\\sSERVICES|PHYSICAL\\sTHERAPY|COMPREHENSIVETHERAPY|PHYSICAL\\sTHERAPY|PEDIATRICS") ~ "MEDICAL",
-                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|WORLD\\sACCEPTANCE|INVESTMENT|FINANCE|MONEY|MOTORS|CASH|B\\s&\\sF|PROFESSIONAL\\sINSURANCE\\sAGENCY\\sCORP|SOUTHWESTERN\\sBELL\\sYELLOW\\sPAGES|SINGLETON\\sENTERPRISES|B&F|B\\sAND\\sF|MANHATTAN\\sMANAGEMENT\\sCOMPANY|ROYAL\\sPRESTIGE|BONDS|TELEPHONE|DEPARTMENT\\sSTORES|AUTO|HOME|ADVANCE\\sAMERICA|STATE\\sOF\\sOKLAHOMA|ROCK\\sKNOLL\\sASSOCIATION|B&\\sF|ELECTRIC|RENT\\sA\\sCENTER|LIBERTY\\sBONDING|DEPARTMENT\\sOF\\sTRANSPORTATION|ORTHOPAEDIC|MANORCARE|CARDIOLOGY") ~ "OTHER",
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|SURGICARE|INTEGRIS\\sAMBULATORY|TERENCE\\sC\\sTOFT\\sDDS|DENTIST|DENTAL|SURGERY|INTEGRIS|ALLIED\\sPHYSICIANS\\sGROUP|SURGICAL|D\\.D\\.S\\.|ADVANCES\\sIN\\sDENTISTRY|OU\\sPHYSICIANS| DDS|COMPREHENSIVE\\sTHERAPY\\sSERVICES|PHYSICAL\\sTHERAPY|COMPREHENSIVETHERAPY|PHYSICAL\\sTHERAPY|PEDIATRICS|ANESTHESIOLOGY|PHARMACEUTICALS|RADIOLOGY|MRI|ORTHOPAEDIC|PULMONARY|CARDIOLOGY|OKLAHOMA\\sFOOT\\sAND\\sANKLE\\sSPECIALISTS|ORTHOPEDICS|ELITE\\sSMILES|ORTHPAEDIC") ~ "MEDICAL",
+                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|WORLD\\sACCEPTANCE|INVESTMENT|FINANCE|MONEY|MOTORS|CASH|B\\s&\\sF|PROFESSIONAL\\sINSURANCE\\sAGENCY\\sCORP|SOUTHWESTERN\\sBELL\\sYELLOW\\sPAGES|SINGLETON\\sENTERPRISES|B&F|B\\sAND\\sF|MANHATTAN\\sMANAGEMENT\\sCOMPANY|ROYAL\\sPRESTIGE|BONDS|TELEPHONE|DEPARTMENT\\sSTORES|AUTO|HOME|ADVANCE\\sAMERICA|STATE\\sOF\\sOKLAHOMA|ROCK\\sKNOLL\\sASSOCIATION|B&\\sF|ELECTRIC|RENT\\sA\\sCENTER|LIBERTY\\sBONDING|DEPARTMENT\\sOF\\sTRANSPORTATION|MANORCARE") ~ "OTHER",
                                  TRUE ~ "UNKNOWN"))
+
+
+
 ```
 
 
@@ -274,7 +290,7 @@ debt <- debt %>%
   slice(1)
 
 ```
-That gives us 26,533 lawsuits filed. 
+That gives us 27,063 lawsuits filed. 
 
 ## Summarizing by year
 To find out how many medicial debt cases were filed in Oklahoma County small claims court each year we just need to count up the number of rows with each distinct file year in our data.
@@ -339,7 +355,7 @@ Created a new dataframe with the median medical debt amount by file_year.
 
 
 ```{r}
-debt_new <-sc%>%
+debt_new <- debt %>%
   group_by(file_year) %>%
   summarise(n_cases = n(),
             n_cases_with_debt = sum(!is.na(debt_amt)),

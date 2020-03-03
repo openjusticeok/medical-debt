@@ -107,6 +107,38 @@ nas_desc
 
 ```
 
+Next, we will add the debt amounts to our dataset.
+## Extract debt amount from minutes
+```{r}
+mins <- ojo_query_mins("CANADIAN", "SC", 2000:2019, min_code = "A/")
+mins <- mins %>% 
+  mutate(debt_amt = min_desc %>% 
+           str_remove_all("[:alpha:]|\\$|,") %>% 
+           str_squish %>% 
+           as.numeric)
+
+
+debt_amts <- mins %>%
+  select(casenum, debt_amt)
+```
+``` {r}
+
+new <- left_join(sc, debt_amts, by= "casenum")
+
+sc <- new 
+
+
+```
+
+Summarize by case level 
+``` {r}
+#sc <- sc %>% 
+  #group_by(casenum) %>% 
+  #slice(1)
+
+```
+
+There are 34,545 small claims cases. 
 
 # Defining Measures
 
@@ -194,8 +226,8 @@ I came up with the following classification:
 
 ``` {r}
 debt <- debt %>% 
-  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|INTEGRIS| DPM| DDS|MEDICINE|DENTAL|ORTHOPAEDIC|FOOT\\sAND\\sANKLE|D\\.P\\.M\\.|PHYSICIANS|RADIOLOGY|SURGICAL") ~ "MEDICAL",
-                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|INVESTMENT|WORLD\\sACCEPTANCE\\sCORP|CITIFINANCIAL|FINANCE|CASH|CHECK|KIDS\\sKLUB|ENVIRONMENTAL|BRONCOS|WESTERN\\sSHAMROCK|MILLERS\\sGATE\\sHOA|VALUED\\sSERVICES\\sOF\\sOKLAHOMA|OSBY\\s&\\sMILLER| HOA|THE\\sLITTLE\\sDIRECTORY|HEAT\\s&\\sAIR|PROPERTY|BRIGHT\\sBEGINNINGS|OIL|RAMEY\\s&\\sTHARP|HOMEOWNERS|GROWING\\sTHE\\sFUTURE|SEED|PEANUT\\sBUTTER\\s&\\sJELLY\\sDAYCARE|CHILD\\sCARE\\sACADEMY|LAWNCARE|HANDLEY\\sLAW\\sCENTER|CONCRETE|ADVANCE\\sAMERICA|ELEVATOR ASSOCIATION|DRIVER\\sTRAINING|OPTOMETRISTS|COMPLETE\\sREHAB\\sINC|CHIROPRACTIC|YUKON\\sWOUND\\sCARE\\s&\\sREHAB") ~ "OTHER",
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|INTEGRIS| DPM| DDS|MEDICINE|DENTAL|ORTHOPAEDIC|FOOT\\sAND\\sANKLE|D\\.P\\.M\\.|PHYSICIANS|RADIOLOGY|D\\.D\\.S\\.|SURGICAL|OPTOMETRISTS|COMPLETE\\sREHAB\\sINC|CHIROPRACTIC|YUKON\\sWOUND\\sCARE\\s&\\sREHAB") ~ "MEDICAL",
+                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|INVESTMENT|WORLD\\sACCEPTANCE\\sCORP|CITIFINANCIAL|FINANCE|CASH|CHECK|KIDS\\sKLUB|ENVIRONMENTAL|BRONCOS|WESTERN\\sSHAMROCK|MILLERS\\sGATE\\sHOA|VALUED\\sSERVICES\\sOF\\sOKLAHOMA|OSBY\\s&\\sMILLER| HOA|THE\\sLITTLE\\sDIRECTORY|HEAT\\s&\\sAIR|PROPERTY|BRIGHT\\sBEGINNINGS|OIL|RAMEY\\s&\\sTHARP|HOMEOWNERS|GROWING\\sTHE\\sFUTURE|SEED|PEANUT\\sBUTTER\\s&\\sJELLY\\sDAYCARE|CHILD\\sCARE\\sACADEMY|LAWNCARE|HANDLEY\\sLAW\\sCENTER|CONCRETE|ADVANCE\\sAMERICA|ELEVATOR ASSOCIATION|DRIVER\\sTRAINING") ~ "OTHER",
                                  TRUE ~ "UNKNOWN"))
 ```
 
@@ -209,8 +241,14 @@ debt %>%
 
 ```
 
-This gives us the most common medical plaintiffs:
+``` {r}
+debt %>%
+  filter(plaint_type == "UNKNOWN") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+```
 
+This gives us the most common medical plaintiffs:
 ```{r}
 debt %>%
   filter(plaint_type == "MEDICAL") %>% 
@@ -238,7 +276,7 @@ debt <- debt %>%
   slice(1)
 
 ```
-That gives us 6,621 lawsuits filed. 
+That gives us 6,628 lawsuits filed. 
 
 ## Summarizing by year
 To find out how many medicial debt cases were filed in Oklahoma County small claims court each year we just need to count up the number of rows with each distinct file year in our data.
@@ -303,6 +341,42 @@ ggplot(plaint_sum, aes(file_year, n, group = plaint_cat, color = plaint_cat)) +
   scale_color_manual(values = ojo_pal) # Gives lines colors from ojo's palette
 
 ```
+### Find median debt amount
+
+Created a new dataframe with the median medical debt amount by file_year. 
+
+
+```{r}
+debt_new <-debt %>%
+  group_by(file_year) %>%
+  summarise(n_cases = n(),
+            n_cases_with_debt = sum(!is.na(debt_amt)),
+            avg = median(debt_amt, na.rm = TRUE)) %>% 
+  mutate(pct_with_debt = n_cases_with_debt/n_cases)
+
+debt_new 
+
+```
+
+
+### Graph median medical debt by year 
+
+```{r}
+
+ggplot(debt_new, aes(x= file_year, y= avg)) +
+  geom_line() +
+  #geom_text(aes(y = avg + 50, label = avg), family = "Menlo", size = 3) +
+  xlab("Year") + ylab("Amount") +
+  ylim(0, NA) + # Extends y-axis down to zero
+  theme_ojo() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.subtitle = element_text(hjust = 0.5)) +
+  labs(title = "Median medical debt amount",
+       subtitle = "Canadian County 2000-2019")
+
+
+```
+
 
 
 ## Summary 1
@@ -313,6 +387,7 @@ I used a line graph to visualize the data.
 - Potential leads and trends
 
 There was a rise in medical debt cases between 2004 and 2011. After 2011 the numbers seemed to stay constant.Case numbers fell sharply at 2018. Further data query is necessary. 
+
 
 ```{r results="asis", echo=FALSE}
 cat("
