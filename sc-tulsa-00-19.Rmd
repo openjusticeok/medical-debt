@@ -128,6 +128,7 @@ Next, we will add the debt amounts to our dataset.
 ## Extract debt amount from minutes
 ```{r}
 mins <- ojo_query_mins("TULSA", "SC", 2000:2019, min_code = "A/")
+
 mins <- mins %>% 
   mutate(debt_amt = min_desc %>% 
            str_remove_all("[:alpha:]|\\$|,") %>% 
@@ -356,9 +357,36 @@ debt_new <- debt %>%
             n_cases_with_debt = sum(!is.na(debt_amt)),
             avg = median(debt_amt, na.rm = TRUE)) %>% 
   mutate(pct_with_debt = n_cases_with_debt/n_cases)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 886850b0ddaa0b6e6aa37d8eda2789c766409739
 
 debt_new 
 
+<<<<<<< HEAD
+=======
+nas_debt_amt <- nas_debt_amt %>% 
+  group_by(casenum) %>% 
+  slice(1)
+
+year_nas_debt_amt <- nas_debt_amt%>% 
+  ungroup %>%
+  count(file_year)
+
+year_nas_debt_amt
+
+
+```
+
+
+Used the case_when() function to classify all rows into missing or not missing the debt amount. 
+```{r}
+new <- new %>% 
+  mutate(debt_amt_na = case_when(debt_amt == "" | is.na(debt_amt) ~ TRUE,
+                                 TRUE ~ FALSE))
+                              
+>>>>>>> 886850b0ddaa0b6e6aa37d8eda2789c766409739
 ```
 
 
