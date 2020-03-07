@@ -308,6 +308,7 @@ ggplot(year_sum, aes(file_year, n)) +
   theme(plot.subtitle = element_text(hjust = 0.5)) +
   labs(title = "Small claims medical debt cases",
        subtitle = "Tulsa County 2000-2019")
+because 
 ```
 
 
