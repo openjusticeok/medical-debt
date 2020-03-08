@@ -1,0 +1,443 @@
+---
+title: "CJ: Tulsa County 00-19"
+author:
+  - Leticia Calvillo, Fellow
+  - Open Justice Oklahoma
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    number_sections: yes
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+library(ojo)
+library(knitr)
+
+
+nc <- function(x) {comma(x, digits = 0)}
+
+```
+Background information: Why are we researching this topic? What is the expected product? A blog post? Analysis for an internal or external partner?
+
+This project aims to shed light on the extent of medical debt in Oklahoma. The goal is to produce blog posts, fact sheets, and/or reports that emphasize the scale of the medicial debt problem in Oklahoma and urge citizens to vote in favor of SQ 802. 
+
+> **Research Question**
+How many medical debt cases were filled in Oklahoma County small claims court each year from 2000-2019? 
+
+# Data sources
+
+Where is the data from? The ojo database? OSCN? ODCR? Crime in Oklahoma reports?
+
+The data is from the ojo database.  
+
+## Timeframe
+
+What years/months are you looking at? Year of case filing, first disposition, prison admission, etc.? Be as specific as possible.
+
+The analysis aims to identify trends in medical debt cases over the past 20 years (2000-2019).
+
+## Geography
+
+What courts/counties/states are you looking at?
+
+This analysis focuses on CJ court cases in Tulsa County.
+
+## Variables
+
+What variables did you use? What types of cases, crimes, etc.?
+
+This project focuses on medical debt cases.
+
+## Query
+
+If you're using data from the OJO database, include the query you used to pull your data. This may be a function that starts `ojo_query_` or `dbGetQuery`.
+
+``` {r}
+
+#oscn_scrape_remaining("TULSA", "CJ", 2000:2019)
+
+CJ <- ojo_query_disps("TULSA", "CJ", 2000:2019) 
+
+
+
+```
+
+This gives us over 524,848 rows of data. Each row in the table is a disposition; since there may be multiple dispositions per case, we should expect that the number of cases is somewhat lower.
+
+# Checking Data
+
+## Check for Completeness
+
+If you're using court data, you can use the `ojo_check_comp` to see how complete the data is.
+
+```{r}
+ojo_check_comp(CJ)
+
+completeness
+```
+The pct_complete column shows that we have nearly 100 percent of expected cases for each year.
+
+## Check for NAs
+
+Detail the NAs and blank items in your data and, if necessary and possible, fill them in.
+
+``` {r}
+nas_plaint<- CJ %>%
+  group_by(casenum) %>% 
+  filter(all(is.na(iss_plaint) | iss_plaint == "")) 
+
+nas_plaint
+
+nas_plaint <- nas_plaint %>% 
+  group_by(casenum) %>% 
+  slice(1)
+
+year_nas_plaint <- nas_plaint%>% 
+  ungroup %>%
+  count(file_year)
+
+year_nas_plaint
+
+```
+Most of the missing plaintiff data occurs in years 2000-2002.
+
+
+``` {r}
+nas_desc <- CJ %>%
+  group_by(casenum) %>% 
+  filter(all(is.na(iss_desc) | iss_desc == "")) 
+
+nas_desc
+
+nas_desc <- nas_desc%>% 
+  group_by(casenum) %>% 
+  slice(1)
+
+year_nas_desc <- nas_desc%>% 
+  ungroup %>%
+  count(file_year)
+
+year_nas_desc
+
+```
+Almost all of the missing data for the issue description (iss_desc) column occurs in 2000. 
+
+Next, we will add the debt amounts to our dataset.
+## Extract debt amount from minutes
+```{r}
+mins <- ojo_query_mins("TULSA", "CJ", 2000:2019, min_code = "A/")
+mins <- mins %>% 
+  mutate(debt_amt = min_desc %>% 
+           str_remove_all("[:alpha:]|\\$|,") %>% 
+           str_squish %>% 
+           as.numeric)
+
+
+debt_amts <- mins %>%
+  select(casenum, debt_amt)
+```
+
+
+``` {r}
+
+new <- left_join(CJ, debt_amts, by= "casenum")
+
+CJ <- new 
+
+
+```
+
+Find number of cases 
+``` {r}
+#CJ <- CJ %>% 
+  #group_by(casenum) %>% 
+  #slice(1)
+```
+That gives us 138,870 lawsuits filed. 
+
+
+
+# Defining Measures
+
+## Debt Cases
+CJ cases generally involve a debt of more than 10,000. To narrow down our data set, we’ll limit to cases that involve debt.That information is found in the issue description (iss_desc) column.
+
+``` {r}
+CJ %>% 
+  count(iss_desc) %>% 
+  arrange(desc(n)) 
+```
+We see that over 176,786 cases are foreclosure. We can discard those. 
+
+We use the str_detect() function to look for rows with the character string “FORECLOSURE”. Putting a ! before it means we want the rows where the string is not detected.
+
+``` {r}
+debt <- CJ %>% 
+  filter(!str_detect(iss_desc, "FORECLOSURE|PROMISSORY|BREACH"))
+
+debt %>% 
+  count(iss_desc) %>% 
+  arrange(desc(n))
+```
+
+Medical debt cases will be filed with “Indebtedness” issues only. We discard all other cases.
+
+``` {r}
+debt <- debt %>% 
+  filter(str_detect(iss_desc, "DEBT"))
+
+debt %>% 
+  count(iss_desc) %>% 
+  arrange(desc(n)) 
+```
+
+## Medical Providers
+
+Next, we will use the mutate() function to classify the cases that have a medical provider plaintiff.
+
+Let’s start by finding the most common plaintiffs.
+
+``` {r}
+debt %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n))  
+```
+
+Many of the most common plaintiffs are clearly medical providers or financial institutions. We use the  case_when() function to classify all rows where one of the words is detected as being filed by a medical provider.
+
+We can also classify the names that contain “BANK” or “LOAN” as not being medical providers. The TRUE category at the end will be applied to all rows that don’t fit any previous conditions.
+
+``` {r}
+debt <- debt %>% 
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL") ~ "MEDICAL",
+                                 str_detect(iss_plaint, "BANK|CREDIT|LOAN") ~ "OTHER",
+                                 TRUE ~ "UNKNOWN"))
+```
+
+To check how many we were able to classify, we’ll look at the count in the plaint_type column.
+``` {r}
+debt %>% 
+  count(plaint_type) %>% 
+  arrange(desc(n))
+
+```
+
+To classify the remaining 222,661, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
+
+To get the most common plaintiffs that are not classified yet:
+
+``` {r}
+debt %>%
+  filter(plaint_type == "UNKNOWN") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+```
+
+I came up with the following classification:
+
+``` {r}
+debt <- debt %>% 
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|AHS|DENTAL|ORTHOPAEDIC|ORTHOPEDIC|HILLCREST\\sRIVERSIDE\\sINC|ONCOLOGY|ST\\sJOHN\\sSAPULPA") ~ "MEDICAL",
+                                 str_detect(iss_plaint, "BANK|LAWN|BOND|CASH|CREDIT|MIDLAND|TAX\\sCOMMISSION|FIA\\sCARD\\sSERVICES|CACH|ASSET\\sACCEPTANCE|TULSA\\sADJUSTMENT\\sBUREAU|MIDLAND|TAX|FIA\\sCARD\\sSERVICES|CACH|ASSET\\sACCEPTANCE|UNIFUND\\sCCR\\sPARTNERS|JEFFERSON CAPITAL\\sSYSTEMS|CAVALRY|AUTO|CITY\\sOF\\sTULSA|STUDENT\\sLOAN") ~ "OTHER",
+                                 TRUE ~ "UNKNOWN"))
+```
+
+This gives us a count of:
+
+```{r}
+debt %>% 
+  count(plaint_type) %>% 
+  arrange(desc(n))
+
+
+```
+``` {r}
+debt %>%
+  filter(plaint_type == "UNKNOWN") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+
+```
+
+
+This gives us the most common medical plaintiffs.
+```{r}
+debt %>%
+  filter(plaint_type == "MEDICAL") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+
+```
+
+``` {r}
+debt %>%
+  filter(plaint_type == "UNKNOWN") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+```
+
+To get a data frame with only the medical debt cases, filter on the plaint_type variable we created.
+``` {r}
+debt <- debt %>% 
+  filter(plaint_type == "MEDICAL")
+
+```
+
+# Summarizing and Visualizing Data
+
+## Summarizing to the case level
+
+``` {r}
+debt <- debt %>% 
+  group_by(casenum) %>% 
+  slice(1)
+```
+That gives us 1,880 lawsuits filed. 
+
+
+## Summarizing by year
+To find out how many medicial debt cases were filed in Tulsa County small claims court each year we just need to count up the number of rows with each distinct file year in our data.
+``` {r}
+year_sum <- debt %>% 
+  ungroup %>%
+  count(file_year)
+```
+
+Now we have a data frame with the number of cases filed in each year. To create a simple line plot with this data.
+``` {r}
+ggplot(year_sum, aes(file_year, n)) +
+  geom_line() +
+  geom_text(aes(y = n + 50, label = n), family = "Menlo", size = 3) +
+  xlab("Year") + ylab("Cases") +
+  ylim(0, NA) +
+  theme_ojo() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.subtitle = element_text(hjust = 0.5)) +
+  labs(title = "CJ medical debt cases",
+       subtitle = "Tulsa County 2000-2019")
+```
+
+
+## Summarizing by provider 
+
+The most common plaintiffs seem to be SAINT FRANCIS,ST JOHN, HILLCREST. Again, we’ll use the str_detect() function to classify the cases. 
+
+``` {r}
+debt <- debt %>% 
+  mutate(plaint_cat = case_when(str_detect(iss_plaint, "SAINT FRANCIS") ~ "SAINT FRANCIS",
+                                str_detect(iss_plaint, "ST JOHN") ~ "ST JOHN",
+                                str_detect(iss_plaint, "HILLCREST MEDICAL CENTER") ~ "HILLCREST",
+                                TRUE ~ "OTHER"))
+
+```
+
+Now we can see how many cases each group filed each year:
+``` {r}
+plaint_sum <- debt %>% 
+  ungroup %>% # Our data frame is still grouped by casenum from the code above; ungroup to summarize using broader groups
+  count(file_year, plaint_cat)
+
+ggplot(plaint_sum, aes(file_year, n, group = plaint_cat, color = plaint_cat)) +
+  geom_line() +
+  xlab("Year") + ylab("Cases")+
+  ylim(0, NA) + # Extends y-axis down to zero
+  theme_ojo() + # Adds ojo styling to the plot
+  theme(legend.title=element_blank())+
+  theme(plot.title = element_text(hjust = 0.5, size = 14)) +
+  theme(plot.subtitle = element_text(hjust = 0.5, size = 13)) +
+  theme(legend.text=element_text(size = 9))+
+  theme(legend.position="bottom")+
+  labs(title = "Small claims medical debt cases\nin Tulsa County 2000-2019",
+       subtitle = "By medical provider") +
+  scale_color_manual(values = ojo_pal) # Gives lines colors from ojo's palette
+
+```
+### Find median debt amount
+
+Created a new dataframe with the median medical debt amount by file_year. 
+
+
+```{r}
+debt_new <-debt%>%
+  group_by(file_year) %>%
+  summarise(n_cases = n(),
+            n_cases_with_debt = sum(!is.na(debt_amt)),
+            avg = median(debt_amt, na.rm = TRUE)) %>% 
+  mutate(pct_with_debt = n_cases_with_debt/n_cases)
+
+debt_new 
+
+```
+
+
+### Graph median medical debt by year 
+
+```{r}
+
+ggplot(debt_new, aes(x= file_year, y= avg)) +
+  geom_line() +
+  #geom_text(aes(y = avg + 50, label = avg), family = "Menlo", size = 3) +
+  xlab("Year") + ylab("Amount") +
+  ylim(0, NA) + # Extends y-axis down to zero
+  theme_ojo() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.subtitle = element_text(hjust = 0.5)) +
+  labs(title = "Median medical debt amount",
+       subtitle = "Tulsa County 2000-2019")
+
+
+```
+
+## Summary 1
+
+- How you summarized and why
+To answer the original question, I summarized by year. To take a deeper look into what is behind the general trends, I also summarized by medical provider. 
+- How you visualized the data
+I used a line graph to visualize the data. 
+- Potential leads and trends
+
+
+
+
+
+```{r results="asis", echo=FALSE}
+cat("
+<style>
+body {
+  padding-top: 63px;
+}
+
+h1.title.toc-ignore {
+  font-family: 'Pluto Sans';
+  font-weight: bold;
+  background-color: #F8D64E;
+}
+
+h1, h2, h3 {
+  font-family: 'Pluto Sans';
+  font-weight: bold;
+}
+
+#TOC {
+  font-family: 'Menlo'
+}
+
+.list-group-item.active, .list-group-item.active:focus, .list-group-item.active:hover {
+    font-weight: bold;
+    color: black;
+    background-color: #F8D64E;
+}
+
+p a {
+  color: black;
+  background-color: #F8D64E;
+  font-weight: bold;
+}
+
+</style>
+")
+```
