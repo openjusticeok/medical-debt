@@ -200,7 +200,7 @@ sc %>%
   count(iss_desc) %>% 
   arrange(desc(n)) 
 ```
-We see that over 92,836 cases are evictions. We can discard those. 
+We see that over 91,342 cases are evictions. We can discard those. 
 
 
 We use the str_detect() function to look for rows with the character string “FORC” in order to catch both “FORCIBLE ENTRY & DETAINER” and “FORCIBLE ENTRY & DETAINER >$1500”, plus any others that may be similar. Putting a ! before it means we want the rows where the string is not detected.
@@ -252,14 +252,13 @@ debt <- debt %>%
 To check how many we were able to classify, we’ll look at the count in the plaint_type column.
 ``` {r}
 debt %>% 
-  ungroup %>%
   count(plaint_type) %>% 
   arrange(desc(n))
 
 
 ```
 
-To classify the remaining 873,44 cases, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
+To classify the remaining 86,779 cases, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
 
 To get the most common plaintiffs that are not classified yet:
 
@@ -275,22 +274,16 @@ I came up with the following classification:
 ``` {r}
 debt <- debt %>% 
   mutate(plaint_type = case_when(str_detect(iss_plaint,
-"HEALTH|CLINIC|MEDICAL|HOSPITAL| MD|ANESTHESIA| CRNA|ENDOSCOPY| DDS| DO|MRI|NORMAN\\sREGIONAL\\sHOPITAL\\sAUTHORITY|PEDIATRICS|AMBULATORY|RADIOLOGY|SMILE\\sSOLUTIONS|SURGICAL|INTEGRIS|NEUROSURGICAL|ORTHOPAEDIC|GI\\sOF\\sNORMAN|ORTHOPEDIC|NEUROSURGERY|PAIN\\sASSOCIATES|UROLOGY|ORTHOPEADIC|CHIROPRACTIC|ANKLE\\sSPECIALISTS") ~ "MEDICAL",
+"HEALTH|CLINIC|MEDICAL|HOSPITAL| MD|ANESTHESIA| CRNA|ENDOSCOPY| DDS| DO|MRI|NORMAN\\sREGIONAL\\sHOPITAL\\sAUTHORITY|PEDIATRICS|AMBULATORY|RADIOLOGY|SMILE\\sSOLUTIONS|SURGICAL|INTEGRIS|NEUROSURGICAL|ORTHOPAEDIC|GI\\sOF\\sNORMAN|ORTHOPEDIC|NEUROSURGERY|PAIN\\sASSOCIATES|UROLOGY|ORTHOPEADIC|ANKLE\\sSPECIALIST|FOOT\\s&\\sANKLE|CRANIOFACIAL|OU\\sPHYSICIANS") ~ "MEDICAL",
                                  str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|LOANS|CITIFINANCIAL|FINAN|ELECTRIC|CASH|CHECKMATE|SYSCO|REALTY|SAND|BONDS|PROPERTIES|WORLD\\sACCEPTANCE\\sCORP|CROSSROADS\\sKIDZ\\sCLUB|INVESTMENT|PROPERTY|UNIVERSTY\\sOF\\sOKLAHOMA|AUTO|GREENBRIAR\\sKINGSPARK\\sHOA|BRSI|JEEP|MOTOR|OKLAHOMA\\sSTATE\\sOF\\sEX|HOMEOWNERS") ~ "OTHER",
                                  TRUE ~ "UNKNOWN"))
 
 
-
-
-
-
-#|FOOT\\s&\\sANKLE|CRANIOFACIAL
 ```
 
 This gives us a count of:
 ``` {r}
 debt %>% 
-  ungroup %>%
   count(plaint_type) %>% 
   arrange(desc(n))
 
@@ -298,7 +291,6 @@ debt %>%
 
 ``` {r}
 debt %>%
-  ungroup %>%
   filter(plaint_type == "UNKNOWN") %>% 
   count(iss_plaint) %>% 
   arrange(desc(n)) 
@@ -332,7 +324,7 @@ debt <- debt %>%
   slice(1)
 
 ```
-That gives us 9,743 lawsuits filed. 
+That gives us 9,770 lawsuits filed. 
 
 
 ## Summarizing by year
@@ -440,7 +432,6 @@ To answer the original question, I summarized by year. To take a deeper look int
 - How you visualized the data
 I used a line graph to visualize the data. 
 - Potential leads and trends
-There was a clear upward trend followed by a decline in number of medcial debt cases. 
 
 ```{r results="asis", echo=FALSE}
 cat("
