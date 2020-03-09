@@ -1,7 +1,7 @@
 ---
 title: "Small Claims: Other OSNC Counties 00-19"
 author:
-  - Leticia, Fellow
+  - Leticia Calvillo, Fellow
   - Open Justice Oklahoma
 date: "`r Sys.Date()`"
 output:
@@ -61,12 +61,12 @@ If you're using data from the OJO database, include the query you used to pull y
 
 ``` {r}
 
-other_counties <- ojo_query_disps(c("ROGERS", "ROGERMILLS", "PUSHMATAHA", "PAYNE", "LOGAN", "GARFIELD", "ELLIS", "ADAIR" ), "SC", 2000:2019)
+other_counties <- ojo_query_disps(c("ROGERS", "ROGERMILLS", "PUSHMATAHA", "PAYNE", "LOGAN", "GARFIELD", "ELLIS", "ADAIR"), "SC", 2000:2019)
 
 
 ```
 
-This gives us over 108,108 rows of data. Each row in the table is a disposition; since there may be multiple dispositions per case, we should expect that the number of cases is somewhat lower.
+This gives us over 108,110 rows of data. Each row in the table is a disposition; since there may be multiple dispositions per case, we should expect that the number of cases is somewhat lower.
 
 
 # Checking Data
@@ -107,9 +107,9 @@ Since the pct_complete column shows that we are missing some of the expected cas
 
 ```
 ```{r}
-ojo_check_comp(other_counties)
+#ojo_check_comp(other_counties)
 
-completeness
+#completeness
 
 ```
 Even after scraping the pct_complete column shows that we are missing some of the expected cases for Adiar 2000-2005, Ellis 2000-2004, Logan 2019, and Pushmataha 2019. 
@@ -165,7 +165,7 @@ year_nas_desc
 Next, we will add the debt amounts to our dataset.
 ## Extract debt amount from minutes
 ```{r}
-mins <- ojo_query_mins(c( "ROGERS", "ROGERMILLS", "PUSHMATAHA", "PAYNE", "LOGAN", "GARFIELD", "ELLIS", "ADAIR"), "SC", 2000:2019, min_code = "A/")
+mins <- ojo_query_mins(c("ROGERS", "ROGERMILLS", "PUSHMATAHA", "PAYNE", "LOGAN", "GARFIELD", "ELLIS", "ADAIR"), "SC", 2000:2019, min_code = "A/")
 mins <- mins %>% 
   mutate(debt_amt = min_desc %>% 
            str_remove_all("[:alpha:]|\\$|,") %>% 
@@ -208,7 +208,7 @@ other_counties %>%
   count(iss_desc) %>% 
   arrange(desc(n)) 
 ```
-We see that over 50,794 cases are evictions. We can discard those. 
+We see that over 20,205 cases are evictions. We can discard those. 
 
 
 We use the str_detect() function to look for rows with the character string “FORC” in order to catch both “FORCIBLE ENTRY & DETAINER” and “FORCIBLE ENTRY & DETAINER >$1500”, plus any others that may be similar. Putting a ! before it means we want the rows where the string is not detected.
@@ -253,7 +253,7 @@ We can also classify the names that contain “BANK” or “LOANS” as not bei
 ``` {r}
 debt <- debt %>% 
   mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL") ~ "MEDICAL",
-                                 str_detect(iss_plaint, "BANK|FCU") ~ "OTHER",
+                                 str_detect(iss_plaint, "BANK|LOANS") ~ "OTHER",
                                  TRUE ~ "UNKNOWN"))
 ```
 
@@ -261,13 +261,12 @@ To check how many we were able to classify, we’ll look at the count in the pla
 
 ``` {r}
 debt %>% 
-  ungroup %>%
   count(plaint_type) %>% 
   arrange(desc(n))
 
 
 ```
-To classify the remaining 60,092 cases, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
+To classify the remaining 49,943, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
 
 To get the most common plaintiffs that are not classified yet:
 
@@ -283,8 +282,10 @@ I came up with the following classification:
 ``` {r}
 debt <- debt %>% 
   mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|AMBULANCE|INTEGRIS| DDS|DENTAL|PHYSICAL\\sTHERAPY|SURGERY|THERAPY\\sINNOVATIONS|UROLOGY") ~ "MEDICAL",
-                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANC|CASH|MONEY|URNITURE|STATE\\sOF\\sOKLAHOMA|WORLD\\sACCEPTANCE|CAR\\sMART|PROPERTY|VALUE\\sAUTO|RENAISSANCE\\sSCHOOL|WATER\\sCONDITIONING|NORTHCUTT|CARMART") ~ "OTHER",
+                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANC|CASH|MONEY|URNITURE|STATE\\sOF\\sOKLAHOMA|WORLD\\sACCEPTANCE|CAR\\sMART|PROPERTY|VALUE\\sAUTO|RENAISSANCE\\sSCHOOL|WATER\\sCONDITIONING|NORTHCUTT|CARMART|OLSON\\sANIMAL\\sHOSPITAL|THE\\sARK\\sANIMAL\\sHOSPITAL|GUTHRIE\\sPET\\sHOSPITAL") ~ "OTHER",
                                  TRUE ~ "UNKNOWN"))
+
+#The 3 animal hospitals listed under "other" are currently categorized under "medical". This must be fixed.
 ```
 
 This gives us a count of:
@@ -330,7 +331,7 @@ debt <- debt %>%
   group_by(casenum) %>% 
   slice(1)
 ```
-This gives us 6,970 lawsuits filed. 
+This gives us 7,300 lawsuits filed. 
 
 ## Summarizing by year
 To find out how many medicial debt cases were filed in small claims courts in Rogers, Rogermills, Pushmataha, Payne, Logan, Garfield, Ellis, Adair counties each year we need to count up the number of rows with each distinct file year in our data.
