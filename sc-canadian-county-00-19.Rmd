@@ -46,7 +46,7 @@ The analysis aims to identify trends in medical debt cases over the past 20 year
 
 What courts/counties/states are you looking at?
 
-This analysis focuses on small claims court cases in Cana County.
+This analysis focuses on small claims court cases in Canadian County.
 
 ## Variables
 
@@ -62,8 +62,6 @@ If you're using data from the OJO database, include the query you used to pull y
 
 sc <- ojo_query_disps("CANADIAN", "SC", 2000:2019)
 
-
-# other_counties <- ojo_query_disps(c("ROGERS", "ROGERMILLS", "PUSHMATAHA"), "SC", 2000:2019)
 ```
 
 This gives us over 43,938 rows of data. Each row in the table is a disposition; since there may be multiple dispositions per case, we should expect that the number of cases is somewhat lower.
@@ -108,9 +106,11 @@ nas_desc
 ```
 
 Next, we will add the debt amounts to our dataset.
+
 ## Extract debt amount from minutes
 ```{r}
 mins <- ojo_query_mins("CANADIAN", "SC", 2000:2019, min_code = "A/")
+
 mins <- mins %>% 
   mutate(debt_amt = min_desc %>% 
            str_remove_all("[:alpha:]|\\$|,") %>% 
@@ -120,6 +120,7 @@ mins <- mins %>%
 
 debt_amts <- mins %>%
   select(casenum, debt_amt)
+
 ```
 ``` {r}
 
@@ -203,7 +204,6 @@ debt <- debt %>%
 To check how many we were able to classify, we’ll look at the count in the plaint_type column.
 ``` {r}
 debt %>% 
-  ungroup %>%
   count(plaint_type) %>% 
   arrange(desc(n))
 
@@ -226,8 +226,8 @@ I came up with the following classification:
 
 ``` {r}
 debt <- debt %>% 
-  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|INTEGRIS| DPM| DDS|MEDICINE|DENTAL|ORTHOPAEDIC|FOOT\\sAND\\sANKLE|D\\.P\\.M\\.|PHYSICIANS|RADIOLOGY|D\\.D\\.S\\.|SURGICAL|OPTOMETRISTS|COMPLETE\\sREHAB\\sINC|CHIROPRACTIC|YUKON\\sWOUND\\sCARE\\s&\\sREHAB") ~ "MEDICAL",
-                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|INVESTMENT|WORLD\\sACCEPTANCE\\sCORP|CITIFINANCIAL|FINANCE|CASH|CHECK|KIDS\\sKLUB|ENVIRONMENTAL|BRONCOS|WESTERN\\sSHAMROCK|MILLERS\\sGATE\\sHOA|VALUED\\sSERVICES\\sOF\\sOKLAHOMA|OSBY\\s&\\sMILLER| HOA|THE\\sLITTLE\\sDIRECTORY|HEAT\\s&\\sAIR|PROPERTY|BRIGHT\\sBEGINNINGS|OIL|RAMEY\\s&\\sTHARP|HOMEOWNERS|GROWING\\sTHE\\sFUTURE|SEED|PEANUT\\sBUTTER\\s&\\sJELLY\\sDAYCARE|CHILD\\sCARE\\sACADEMY|LAWNCARE|HANDLEY\\sLAW\\sCENTER|CONCRETE|ADVANCE\\sAMERICA|ELEVATOR ASSOCIATION|DRIVER\\sTRAINING") ~ "OTHER",
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|INTEGRIS| DPM| DDS|MEDICINE|DENTAL|ORTHOPAEDIC|FOOT\\sAND\\sANKLE|D\\.P\\.M\\.|PHYSICIANS|RADIOLOGY|D\\.D\\.S\\.|SURGICAL|OPTOMETRISTS|COMPLETE\\sREHAB\\sINC|CHIROPRACTIC|YUKON\\sWOUND\\sCARE\\s&\\sREHAB|YUKON\\sWOUND\\sCARE\\sAND\\sREHABILITATION") ~ "MEDICAL",
+                                 str_detect(iss_plaint, "BANK|FCU|CREDIT|LOAN|FINANCIAL|INVESTMENT|WORLD\\sACCEPTANCE\\sCORP|CITIFINANCIAL|FINANCE|CASH|CHECK|KIDS\\sKLUB|ENVIRONMENTAL|BRONCOS|WESTERN\\sSHAMROCK|MILLERS\\sGATE\\sHOA|VALUED\\sSERVICES\\sOF\\sOKLAHOMA|OSBY\\s&\\sMILLER| HOA|THE\\sLITTLE\\sDIRECTORY|HEAT\\s&\\sAIR|PROPERTY|BRIGHT\\sBEGINNINGS|OIL|RAMEY\\s&\\sTHARP|HOMEOWNERS|GROWING\\sTHE\\sFUTURE|SEED|PEANUT\\sBUTTER\\s&\\sJELLY\\sDAYCARE|CHILD\\sCARE\\sACADEMY|LAWNCARE|HANDLEY\\sLAW\\sCENTER|CONCRETE|ADVANCE\\sAMERICA|ELEVATOR ASSOCIATION|DRIVER\\sTRAINING|WEST\\sYUKON\\sANIMAL\\sHOSPITAL|CANADIAN\\sVALLEY\\sANIMAL\\sCLINIC|YUKON\\sVETERINARY\\sHOSPITAL\\sINC|YUKON\\sVETERINARY\\sHOSPITAL") ~ "OTHER",
                                  TRUE ~ "UNKNOWN"))
 ```
 
@@ -276,7 +276,7 @@ debt <- debt %>%
   slice(1)
 
 ```
-That gives us 6,628 lawsuits filed. 
+That gives us 6,686 lawsuits filed. 
 
 ## Summarizing by year
 To find out how many medicial debt cases were filed in Oklahoma County small claims court each year we just need to count up the number of rows with each distinct file year in our data.
@@ -356,6 +356,7 @@ debt_new <-debt %>%
 
 debt_new 
 
+
 ```
 
 
@@ -373,7 +374,6 @@ ggplot(debt_new, aes(x= file_year, y= avg)) +
   theme(plot.subtitle = element_text(hjust = 0.5)) +
   labs(title = "Median medical debt amount",
        subtitle = "Canadian County 2000-2019")
-
 
 ```
 
