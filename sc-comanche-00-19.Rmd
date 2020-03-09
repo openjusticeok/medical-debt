@@ -244,10 +244,6 @@ Summarize case number
 There are 83,732 small claims cases 
 # Defining Measures
 
-This is where you'll likely spend the biggest chunk of time if you're using court data. There are a lot of ways things can go wrong, so we want to be able to trace back all of our steps and document all the decisions we're making.
-
-Because each analysis project is a bit different, the number and length of subsections in this section will vary a lot. 
-
 ``` {r}
 sc %>% 
   count(iss_desc) %>% 
@@ -296,20 +292,19 @@ We can also classify the names that contain “BANK” or “LOANS” as not bei
 ``` {r}
 debt <- debt %>% 
   mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL") ~ "MEDICAL",
-                                 str_detect(iss_plaint, "BANK|FCU") ~ "OTHER",
+                                 str_detect(iss_plaint, "BANK|LOANS") ~ "OTHER",
                                  TRUE ~ "UNKNOWN"))
 ```
 
 To check how many we were able to classify, we’ll look at the count in the plaint_type column.
 ``` {r}
 debt %>% 
-  ungroup %>%
   count(plaint_type) %>% 
   arrange(desc(n))
 
 
 ```
-To classify the remaining 43,088 cases, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
+To classify the remaining 37,985 cases, we comb through the plaintiffs and classify them. We can repeat the three steps above until we have enough of them classified.
 
 To get the most common plaintiffs that are not classified yet:
 
@@ -336,7 +331,6 @@ debt %>%
   count(plaint_type) %>% 
   arrange(desc(n))
 
-
 ```
 ``` {r}
 debt %>%
@@ -344,8 +338,6 @@ debt %>%
   count(iss_plaint) %>% 
   arrange(desc(n)) 
 ```
-
-
 
 This gives us the most common medical plaintiffs:
 
