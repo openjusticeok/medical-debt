@@ -129,6 +129,7 @@ Almost all of the missing data for the issue description (iss_desc) column occur
 Next, we will add the debt amounts to our dataset.
 ## Extract debt amount from minutes
 ```{r}
+
 mins <- ojo_query_mins("TULSA", "CJ", 2000:2019, min_code = "A/")
 mins <- mins %>% 
   mutate(debt_amt = min_desc %>% 
