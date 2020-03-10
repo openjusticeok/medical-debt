@@ -58,7 +58,7 @@ If you're using data from the OJO database, include the query you used to pull y
 
 ``` {r}
 
-sc <- ojo_query_disps("TULSA", "SC", 2000:2019) 
+sc <- ojo_query_disps("TULSA", "SC", 2000:2019)
 
 
 ```
