@@ -268,7 +268,7 @@ debt %>%
 This gives us the most common medical plaintiffs.
 ```{r}
 debt %>%
-  filter(plaint_type == "MEDICAL") %>% 
+  filter(plaint_type == "MEDICAL") %>%
   count(iss_plaint) %>% 
   arrange(desc(n)) 
 
