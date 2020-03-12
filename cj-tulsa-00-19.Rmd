@@ -241,13 +241,12 @@ debt %>%
 I came up with the following classification:
 
 ``` {r}
+
 debt <- debt %>% 
-  mutate(plaint_type = case_when(str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|AHS|DENTAL|ORTHOPAEDIC|ORTHOPEDIC|HILLCREST\\sRIVERSIDE\\sINC|ONCOLOGY|ST\\sJOHN\\sSAPULPA|HOME\\sIV\\sCARE\\sINC|B\\sP\\sMD|NEONATOLOGY\\sGROUP") ~ "MEDICAL",
-                                 str_detect(iss_plaint, "BANK|LAWN|BOND|CASH|CREDIT|MIDLAND|TAX\\sCOMMISSION|FIA\\sCARD\\sSERVICES|CACH|TULSA\\sADJUSTMENT\\sBUREAU|TAX|CACH|ASSET\\sACCEPTANCE|UNIFUND\\sCCR\\sPARTNERS|JEFFERSON CAPITAL\\sSYSTEMS|CAVALRY|AUTO|CITY\\sOF\\sTULSA|STUDENT\\sLOAN") ~ "OTHER",
+  mutate(plaint_type = case_when(str_detect(iss_plaint, "BANK|LAWN|BOND|CASH|CREDIT|MIDLAND|TAX\\sCOMMISSION|FIA\\sCARD\\sSERVICES|CACH|TULSA\\sADJUSTMENT\\sBUREAU|TAX|CACH|ASSET\\sACCEPTANCE|UNIFUND\\sCCR\\sPARTNERS|JEFFERSON CAPITAL\\sSYSTEMS|CAVALRY|AUTO|CITY\\sOF\\sTULSA|STUDENT\\sLOAN|HOME\\sOPTIONS\\sMEDICAL\\sEQUIPMENT\\sINC|MEGA\\sLIFE") ~ "OTHER",
+                                 str_detect(iss_plaint, "HEALTH|CLINIC|MEDICAL|HOSPITAL|AHS|DENTAL|ORTHOPAEDIC|ORTHOPEDIC|HILLCREST\\sRIVERSIDE\\sINC|ONCOLOGY|ST\\sJOHN\\sSAPULPA|HOME\\sIV\\sCARE\\sINC|B\\sP\\sMD|NEONATOLOGY\\sGROUP|MEGA\\sLIFE\\sAND\\sHEALTH\\sINSURANCE\\sCOMPANY|MERITS\\sHEALTH\\sPRODUCTS\\sINC|APEX\\sMEDICAL\\sGAS\\sSYSTEMS\\sINC|MAXWELL\\sHEALTHCARE\\sCONSULTING\\sPLLC|TEJ\\sHOSPITALITY\\sINC|AMERICAN\\sINSTITUTE\\sOF\\sMEDICAL\\sTECHNOLOGY\\sLLC|TOTAL\\sMEDICAL\\sPERSONNEL\\sSTAFFING\\sLLC|TRI\\sANIM\\sHEALTH\\sSERVICES\\sINC|JEFFREY\\sDO") ~ "MEDICAL",
                                  TRUE ~ "UNKNOWN"))
 
-
-#MEGA LIFE AND HEALTH INSURANCE COMPANY|MERITS HEALTH PRODUCTS INC|APEX MEDICAL GAS SYSTEMS INC|MAXWELL HEALTHCARE CONSULTING PLLC|TEJ HOSPITALITY INC|AMERICAN INSTITUTE OF MEDICAL TECHNOLOGY LLC|TOTAL MEDICAL PERSONNEL STAFFING LLC|TRI ANIM HEALTH SERVICES INC
 ```
 
 This gives us a count of:
@@ -259,6 +258,8 @@ debt %>%
 
 
 ```
+This gives us the most common UNKNOWN plaintiffs.
+
 ``` {r}
 debt %>%
   filter(plaint_type == "UNKNOWN") %>% 
@@ -266,7 +267,15 @@ debt %>%
   arrange(desc(n)) 
 
 ```
+This gives us the most common OTHER plaintiffs.
 
+```{r}
+debt %>%
+  filter(plaint_type == "OTHER") %>% 
+  count(iss_plaint) %>% 
+  arrange(desc(n)) 
+
+```
 
 This gives us the most common medical plaintiffs.
 ```{r}
@@ -275,13 +284,6 @@ debt %>%
   count(iss_plaint) %>% 
   arrange(desc(n)) 
 
-```
-
-``` {r}
-debt %>%
-  filter(plaint_type == "UNKNOWN") %>% 
-  count(iss_plaint) %>% 
-  arrange(desc(n)) 
 ```
 
 To get a data frame with only the medical debt cases, filter on the plaint_type variable we created.
