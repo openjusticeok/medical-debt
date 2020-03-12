@@ -187,6 +187,20 @@ Medical debt cases will be filed with “Indebtedness” issues only. We discard
 debt <- debt %>% 
   filter(str_detect(iss_desc, "DEBT"))
 
+```
+
+Summarizing to the case level
+```{r}
+
+#debt <- debt %>% 
+  #group_by(casenum) %>% 
+  #slice(1)
+
+```
+This gives us 196,302 debt lawsuits filed. 
+
+
+```{r}
 debt %>% 
   count(iss_desc) %>% 
   arrange(desc(n)) 
@@ -285,7 +299,6 @@ debt %>%
 ```
 
 
-
 To get a data frame with only the medical debt cases, filter on the plaint_type variable we created.
 ``` {r}
 debt <- debt %>% 
@@ -303,7 +316,6 @@ debt <- debt %>%
   slice(1)
 ```
 That gives us 45,324 lawsuits filed. 
-
 
 ## Summarizing by year
 To find out how many medicial debt cases were filed in Tulsa County small claims court each year we just need to count up the number of rows with each distinct file year in our data.
