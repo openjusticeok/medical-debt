@@ -302,7 +302,7 @@ debt <- debt %>%
   group_by(casenum) %>% 
   slice(1)
 ```
-That gives us 45,199 lawsuits filed. 
+That gives us 45,324 lawsuits filed. 
 
 
 ## Summarizing by year
