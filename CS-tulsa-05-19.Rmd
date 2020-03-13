@@ -1,7 +1,7 @@
 ---
 title: "CS: Tulsa County 05-19"
 author:
-  - Leticia, Fellow
+  - Leticia Calvillo, Fellow
   - Open Justice Oklahoma
 date: "`r Sys.Date()`"
 output:
