@@ -202,7 +202,7 @@ Let’s start by finding the most common plaintiffs.
 ``` {r}
 debt %>% 
   count(iss_plaint) %>% 
-  arrange(desc(n))  
+  arrange(desc(n))
 ```
 
 Many of the most common plaintiffs are clearly medical providers or financial institutions. We use the  case_when() function to classify all rows where one of the words is detected as being filed by a medical provider.
