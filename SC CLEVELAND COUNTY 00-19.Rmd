@@ -14,7 +14,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-library(ojo)
+library(ojodb)
 library(knitr)
 
 
@@ -75,9 +75,9 @@ If you're using court data, you can use the `ojo_check_comp` to see how complete
 
 ```{r}
 
-ojo_check_comp(sc)
+#ojo_check_comp(sc)
 
-completeness
+#completeness
 
 ```
 
@@ -136,7 +136,7 @@ plaint_names <- party_names %>%
  Add new plaintiff names to nas_plaint dataframe
 
 ```{r}
-nas <- nas%>% 
+nas_plaint <- nas%>% 
   select(-iss_plaint) %>% 
   left_join(plaint_names)
 ```
