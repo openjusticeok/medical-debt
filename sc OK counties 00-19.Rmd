@@ -14,7 +14,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-library(ojo)
+library(ojodb)
 library(knitr)
 
 nc <- function(x) {comma(x, digits = 0)}
@@ -77,9 +77,9 @@ If you're using court data, you can use the `ojo_check_comp` to see how complete
 
 ```{r}
 
-ojo_check_comp(other_counties)
+#ojo_check_comp(other_counties)
 
-completeness
+#completeness
 ```
 
 Since the pct_complete column shows that we are missing some of the expected cases we will scrape the remainder. 

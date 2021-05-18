@@ -14,7 +14,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-library(ojo)
+library(ojodb)
 library(knitr)
 
 
@@ -71,9 +71,9 @@ This gives us over 1,038,037 rows of data. Each row in the table is a dispositio
 If you're using court data, you can use the `ojo_check_comp` to see how complete the data is.
 
 ```{r}
-ojo_check_comp(all)
+#ojo_check_comp(all)
 
-completeness
+#completeness
 ```
 The pct_complete column shows that we have nearly 100 percent of expected cases for each year.
 
